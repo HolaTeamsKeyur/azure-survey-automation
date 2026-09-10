@@ -106,6 +106,33 @@ export interface SurveySubmission {
   reason?: string;
   feedbackScore?: number;
   feedbackComments?: string;
+  details?: SurveyDetails;
+}
+
+export interface SurveyDetails {
+  address?: string;
+  propertyType?: string;
+  propertyAge?: string;
+  advertisingSource?: string;
+  existingHatchType?: string;
+  flooringRequired?: string;
+  ladderRequired?: string;
+  lightRequired?: string;
+  insulationRequired?: string;
+  otherInformation?: string;
+  quotationDate?: string;
+  houseType?: string;
+  roofType?: string;
+  ceilingHeightCm?: number;
+  hatchTopWidthCm?: number;
+  hatchTopLengthCm?: number;
+  hatchInsideWidthCm?: number;
+  hatchInsideLengthCm?: number;
+  ladderClearanceWidthCm?: number;
+  ladderArcClearanceCm?: number;
+  ladderArcType?: string;
+  planNotes?: string;
+  additionalInfo?: string;
 }
 
 export interface InstallationSubmission {

@@ -59,6 +59,36 @@ Open **Objects** > **Tables** > **Opportunity** > **Schema** > **Columns**. For 
 | Survey Document Reference | `ht_SurveyDocumentReference` | Text; 500 characters | Yes | Visible, read-only; secure |
 | Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiline text; 4,000 characters | Yes | Admin only; secure |
 
+Create these additional **Opportunity** columns for the actual Survey and Quotation Form. They store the form shown in the existing Access4Lofts template:
+
+| Display name | Schema name | Data type and settings |
+|---|---|---|
+| Survey Address | `ht_SurveyAddress` | Multiline text; 500 characters |
+| Survey Property Type | `ht_SurveyPropertyType` | Text; 250 characters |
+| Survey Property Age | `ht_SurveyPropertyAge` | Text; 250 characters |
+| Survey Advertising Source | `ht_SurveyAdvertisingSource` | Text; 250 characters |
+| Survey Existing Hatch Type | `ht_SurveyExistingHatchType` | Text; 250 characters |
+| Survey Flooring Required | `ht_SurveyFlooringRequired` | Text; 250 characters |
+| Survey Ladder Required | `ht_SurveyLadderRequired` | Text; 250 characters |
+| Survey Light Required | `ht_SurveyLightRequired` | Text; 250 characters |
+| Survey Insulation Required | `ht_SurveyInsulationRequired` | Text; 250 characters |
+| Survey Other Information | `ht_SurveyOtherInformation` | Multiline text; 4,000 characters |
+| Quotation Date | `ht_QuotationDate` | Date only |
+| Survey House Type | `ht_SurveyHouseType` | Text; 250 characters |
+| Survey Roof Type | `ht_SurveyRoofType` | Text; 250 characters |
+| Survey Ceiling Height cm | `ht_SurveyCeilingHeightCm` | Decimal number; precision 1; minimum 0 |
+| Survey Hatch Top Width cm | `ht_SurveyHatchTopWidthCm` | Decimal number; precision 1; minimum 0 |
+| Survey Hatch Top Length cm | `ht_SurveyHatchTopLengthCm` | Decimal number; precision 1; minimum 0 |
+| Survey Hatch Inside Width cm | `ht_SurveyHatchInsideWidthCm` | Decimal number; precision 1; minimum 0 |
+| Survey Hatch Inside Length cm | `ht_SurveyHatchInsideLengthCm` | Decimal number; precision 1; minimum 0 |
+| Survey Ladder Clearance Width cm | `ht_SurveyLadderClearanceWidthCm` | Decimal number; precision 1; minimum 0 |
+| Survey Ladder Arc Clearance cm | `ht_SurveyLadderArcClearanceCm` | Decimal number; precision 1; minimum 0 |
+| Survey Ladder Arc Type | `ht_SurveyLadderArcType` | Text; 100 characters |
+| Survey Plan Notes | `ht_SurveyPlanNotes` | Multiline text; 4,000 characters |
+| Survey Additional Information | `ht_SurveyAdditionalInfo` | Multiline text; 4,000 characters |
+
+Keep these optional and enable auditing. Add the business-facing fields to a **Survey Details** section on the Opportunity form; do not add token/snapshot fields there.
+
 After saving, open each column once and verify its lower-case logical name matches the equivalent name in `assets/DATAVERSE-FIELDS.csv`. Once a schema name is committed, do not delete and recreate it casually; integrations depend on the logical name.
 
 ## 4. Create the Order columns
@@ -90,11 +120,11 @@ Open **Tables** > **Price List Item** > **Schema** > **Columns**. These fields c
 
 Do not add region columns directly to Product. The regional Price List determines whether a Product is offered and what price applies.
 
-## 6. Optional Opportunity Product review columns
+## 6. Opportunity Products created by submission
 
-Create these only when the team wants the customer's selections copied to Opportunity Product rows for staff review. The submitted JSON snapshot remains the source evidence even when these columns are used.
+Add the existing **Opportunity Product** table to the solution. When the Survey and Quotation Form is submitted, the Azure API creates or updates standard Opportunity Product rows automatically. It uses the selected regional Product, Unit, entered Quantity and the price snapshot displayed on the form. Repeating a request updates the existing product row instead of duplicating it.
 
-Open **Tables** > **Opportunity Product** > **Schema** > **Columns**:
+The following custom audit columns remain optional; the automation does not require them:
 
 | Display name | Schema name | Data type and settings | Default | Audit |
 |---|---|---|---|---|
@@ -102,7 +132,7 @@ Open **Tables** > **Opportunity Product** > **Schema** > **Columns**:
 | Customer Requested Quantity | `ht_CustomerRequestedQuantity` | Decimal number; precision 3 | blank | Yes |
 | Survey Selection Note | `ht_SurveySelectionNote` | Multiline text; 1,000 characters | blank | Yes |
 
-Do not auto-create commercial Quote lines from anonymous browser input. Keep the Opportunity status at `pending_review`; a staff member verifies quantity, price and VAT before using the existing Quote process.
+The automation creates **Opportunity Products**, not Quote lines. Staff can review the opportunity products before starting the existing Quote process.
 
 ## 7. Build the Opportunity form section
 
@@ -348,4 +378,3 @@ Microsoft references:
 - [Create and edit model-driven app forms](https://learn.microsoft.com/en-us/power-apps/maker/model-driven-apps/create-and-edit-forms)
 - [Use the modern command designer](https://learn.microsoft.com/en-us/power-apps/maker/model-driven-apps/use-command-designer)
 - [Manage commands in solutions](https://learn.microsoft.com/en-us/power-apps/maker/model-driven-apps/manage-commands-in-solutions)
-

@@ -22,27 +22,17 @@ Called when an Order Confirmation has approved installation start/end values.
 - Result: `202` after Order Confirmation response metadata is prepared or `200` when its active token is reused.
 - It uses the same `401`/`400`/`503` failure classification and correlation header as the survey ingress.
 
-## Outlook Actionable Message endpoints
-
-### `POST /action/survey`
-
-Receives `Action.Http` from Outlook.
-
-- Entra bearer token from the Outlook Actions service: required.
-- The service validates signature, issuer, API audience, calling application and permitted tenant.
-- JSON: `token`, `response`, optional `selectedProducts`, and optional `reason`.
-- `response`: `accepted`, `declined`, or `reschedule_requested`.
-- The Outlook actor email must hash to the recipient snapshot in the signed session token.
+## Outlook Actionable Message endpoint
 
 ### `POST /action/installation`
 
-Uses the same Entra validation. JSON fields are `token`, `response`, and optional `reason`. The Order ID is intentionally not accepted from the browser; it is resolved from the signed token and matched to the Order Confirmation token ID.
+Used only by the installation-confirmation email. The endpoint validates the Outlook Entra token. JSON fields are `token`, `response`, and optional `reason`. The Order ID is intentionally not accepted from the browser; it is resolved from the signed token and matched to the Order Confirmation token ID.
 
 ## Hosted fallback endpoints
 
 ### `GET|POST /survey/{signed-token}`
 
-Displays and processes the full product/feedback form. Product choices come from the immutable snapshot stored on Opportunity, not from browser input or the current live Price List.
+Displays and processes the record-specific Customer Enquiry / Survey and Quotation Form. Enquiry values are loaded from the related Opportunity and Contact. Product rows come from the immutable regional Price List snapshot. Submitted quantities create or update standard Opportunity Product rows.
 
 ### `GET|POST /installation/{signed-token}`
 

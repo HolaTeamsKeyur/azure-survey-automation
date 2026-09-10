@@ -1,6 +1,6 @@
 # Local end-to-end demo (no Microsoft identity required)
 
-This mode uses sample records in memory. It does not connect to Dataverse, Azure, or Microsoft Graph, and it does not send email.
+This mode renders the real customer-facing form with a representative Brighton enquiry. It does not connect to Dataverse, Azure, or Microsoft Graph, and it does not send email.
 
 ## Start
 
@@ -23,14 +23,14 @@ npm run demo:local
 
 ## One-pass test
 
-1. Switch between **West Midlands** and **North West**. Confirm that the product rows and prices change while the customer flow remains the same.
-2. Open **Outlook email + cards preview**. Expand each JSON section to inspect the Adaptive Card payload.
-3. Open the signed survey form. Select products, change quantities, submit, and confirm that the dashboard shows the new survey status, selected-row count, and subtotal.
-4. Use **Reset sample records**, then open the installation form and submit a response. Confirm its status on the dashboard.
-5. Download the Word file. Confirm that the header/footer and totals layout stay fixed while its product table uses the currently selected region.
-6. Check `http://127.0.0.1:4280/api/health`; it must report `"mode": "local-mock"`.
+1. Confirm the browser opens directly on the branded two-sheet **Customer Enquiry Form / Survey and Quotation Form**—there is no developer dashboard.
+2. Confirm enquiry details are already populated and the Brighton product rows/prices are already present.
+3. Complete survey measurements and enter quantities for the required products. Confirm line totals, VAT and fitted total calculate in the browser.
+4. Submit and confirm that the success page reports the number of product lines added to the opportunity.
+5. Separately open `http://127.0.0.1:4280/installation-email-preview`. This is the only place the installation Adaptive Card is demonstrated.
+6. Check `http://127.0.0.1:4280/api/health`; it must report `"status": "ok"`.
 
-The records reset whenever the server stops. A reset also invalidates previously issued signed links, demonstrating token-revocation behavior.
+The in-memory record resets whenever the server stops.
 
 ## After the administrator supplies access
 

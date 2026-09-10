@@ -6,7 +6,6 @@ import { findFirstAvailableSlot } from "../domain/scheduling.js";
 import { DataverseClient } from "../infrastructure/dataverse.js";
 import { SurveyDocumentService } from "../infrastructure/documents.js";
 import { GraphClient, type MailAttachment } from "../infrastructure/graph.js";
-import { buildSurveyCard } from "../messages/cards.js";
 import { issueSurveyToken, type SurveyTokenClaims } from "../security/tokens.js";
 
 export class SurveyAutomationService {
@@ -84,16 +83,6 @@ export class SurveyAutomationService {
       };
       const token = await issueSurveyToken(this.config, claims);
       const formUrl = `${this.config.publicBaseUrl}/api/survey/${encodeURIComponent(token)}`;
-      const card = this.config.enableActionableMessages ? buildSurveyCard({
-        originatorId: this.config.ACTIONABLE_ORIGINATOR_ID,
-        context,
-        products,
-        scheduledStart: session.scheduledStart,
-        scheduledEnd: session.scheduledEnd,
-        actionUrl: `${this.config.publicBaseUrl}/api/action/survey`,
-        token,
-        formUrl
-      }) : undefined;
       const attachments: MailAttachment[] = [];
       if (this.config.enableWordDocument) {
         if (!this.documents) throw new Error("Word document generation is enabled but template storage is not configured.");
@@ -116,7 +105,7 @@ export class SurveyAutomationService {
         context.customer.email,
         `Your Access4Lofts survey - ${context.name}`,
         fallback,
-        card,
+        undefined,
         attachments
       );
       assertTransition("draft", "sent");
@@ -134,7 +123,7 @@ export class SurveyAutomationService {
   async submitSurvey(
     input: SurveySubmission,
     tokenClaims: SurveyTokenClaims
-  ): Promise<{ status: string }> {
+  ): Promise<{ status: string; productCount: number }> {
     const submission = validateSurveySubmission(input);
     const session = await this.dataverse.getSession(submission.sessionId);
     if (session.tokenId !== tokenClaims.tokenId || hashEmail(session.recipientEmail) !== tokenClaims.recipientHash) {
@@ -142,7 +131,7 @@ export class SurveyAutomationService {
     }
     if (new Date(session.expiresAt) <= new Date()) throw new Error("Survey link has expired.");
     if (["accepted", "declined", "reschedule_requested"].includes(session.status)) {
-      return { status: session.status };
+      return { status: session.status, productCount: session.selectionSnapshot.length };
     }
     assertTransition(session.status, submission.response);
 
@@ -158,7 +147,7 @@ export class SurveyAutomationService {
         ...commonPatch,
         ht_surveyproductreviewstatuskey: "not_received"
       }, session.version);
-      return { status: submission.response };
+      return { status: submission.response, productCount: 0 };
     }
 
     const requested = submission.productSelections ?? submission.selectedProductIds.map(productId => ({
@@ -166,17 +155,20 @@ export class SurveyAutomationService {
       quantity: session.productsSnapshot.find(product => product.productId.toLowerCase() === productId.toLowerCase())?.quantity ?? 1
     }));
     const selected = validateProductSelections(requested, session.productsSnapshot);
+    await this.dataverse.upsertOpportunityProducts(session.opportunityId, selected);
     await this.dataverse.updateSession(session.id, {
       ...commonPatch,
+      ...surveyDetailsPatch(submission.details),
       ht_surveyselectedproductids: selected.map(product => product.productId).join(","),
       ht_surveyselectionsnapshotjson: JSON.stringify(selected),
-      ht_surveyproductreviewstatuskey: "pending_review"
+      ht_surveyproductreviewstatuskey: "applied"
     }, session.version);
-    return { status: "accepted" };
+    return { status: "accepted", productCount: selected.length };
   }
 
   async getSurveyForm(tokenClaims: SurveyTokenClaims): Promise<{
     session: Awaited<ReturnType<DataverseClient["getSession"]>>;
+    context: Awaited<ReturnType<DataverseClient["getOpportunityContext"]>>;
     products: ProductOption[];
   }> {
     const session = await this.dataverse.getSession(tokenClaims.sessionId);
@@ -184,12 +176,42 @@ export class SurveyAutomationService {
       throw new Error("Survey token does not match the Opportunity.");
     }
     if (new Date(session.expiresAt) <= new Date()) throw new Error("Survey link has expired.");
-    return { session, products: session.productsSnapshot };
+    const context = await this.dataverse.getOpportunityContext(session.opportunityId);
+    return { session, context, products: session.productsSnapshot };
   }
 
   parseProductSelection(value: string | undefined): string[] {
     return splitProductIds(value);
   }
+}
+
+function surveyDetailsPatch(details: SurveySubmission["details"]): Record<string, unknown> {
+  if (!details) return {};
+  return {
+    ht_surveyaddress: details.address ?? null,
+    ht_surveypropertytype: details.propertyType ?? null,
+    ht_surveypropertyage: details.propertyAge ?? null,
+    ht_surveyadvertisingsource: details.advertisingSource ?? null,
+    ht_surveyexistinghatchtype: details.existingHatchType ?? null,
+    ht_surveyflooringrequired: details.flooringRequired ?? null,
+    ht_surveyladderrequired: details.ladderRequired ?? null,
+    ht_surveylightrequired: details.lightRequired ?? null,
+    ht_surveyinsulationrequired: details.insulationRequired ?? null,
+    ht_surveyotherinformation: details.otherInformation ?? null,
+    ht_quotationdate: details.quotationDate ?? null,
+    ht_surveyhousetype: details.houseType ?? null,
+    ht_surveyrooftype: details.roofType ?? null,
+    ht_surveyceilingheightcm: details.ceilingHeightCm ?? null,
+    ht_surveyhatchtopwidthcm: details.hatchTopWidthCm ?? null,
+    ht_surveyhatchtoplengthcm: details.hatchTopLengthCm ?? null,
+    ht_surveyhatchinsidewidthcm: details.hatchInsideWidthCm ?? null,
+    ht_surveyhatchinsidelengthcm: details.hatchInsideLengthCm ?? null,
+    ht_surveyladderclearancewidthcm: details.ladderClearanceWidthCm ?? null,
+    ht_surveyladderarcclearancecm: details.ladderArcClearanceCm ?? null,
+    ht_surveyladderarctype: details.ladderArcType ?? null,
+    ht_surveyplannotes: details.planNotes ?? null,
+    ht_surveyadditionalinfo: details.additionalInfo ?? null
+  };
 }
 
 export function hashEmail(email: string): string {

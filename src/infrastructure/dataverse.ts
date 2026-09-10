@@ -5,6 +5,7 @@ import type {
   InstallationSubmission,
   OpportunityContext,
   ProductOption,
+  SurveyProductSelectionSnapshot,
   SurveySession,
   SurveySessionStatus
 } from "../domain/models.js";
@@ -122,6 +123,37 @@ export class DataverseClient {
         sortOrder: numberOr(row.ht_surveydisplayorder, index + 1)
       };
     });
+  }
+
+  async upsertOpportunityProducts(opportunityId: string, selections: readonly SurveyProductSelectionSnapshot[]): Promise<void> {
+    const opportunity = normalizeGuid(opportunityId);
+    const existing = await this.request<{ value: Array<Record<string, unknown>> }>(
+      `opportunityproducts?$select=opportunityproductid,_productid_value&$filter=_opportunityid_value eq ${opportunity}`
+    );
+    const byProduct = new Map(existing.value.map(row => [String(row._productid_value).toLowerCase(), String(row.opportunityproductid)]));
+
+    for (const selection of selections) {
+      const productId = normalizeGuid(selection.productId);
+      const body = {
+        quantity: selection.quantity,
+        ispriceoverridden: true,
+        priceperunit: selection.unitPrice
+      };
+      const existingId = byProduct.get(productId);
+      if (existingId) {
+        await this.request(`opportunityproducts(${normalizeGuid(existingId)})`, { method: "PATCH", body: JSON.stringify(body) });
+      } else {
+        await this.request("opportunityproducts", {
+          method: "POST",
+          body: JSON.stringify({
+            ...body,
+            "opportunityid@odata.bind": `/opportunities(${opportunity})`,
+            "productid@odata.bind": `/products(${productId})`,
+            "uomid@odata.bind": `/uoms(${normalizeGuid(selection.unitId)})`
+          })
+        });
+      }
+    }
   }
 
   async findOpenSession(opportunityId: string): Promise<SurveySession | undefined> {

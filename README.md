@@ -19,7 +19,7 @@ Public survey/confirmation form and email automation using existing Dataverse ta
 1. Opportunity triggers automatic survey scheduling.
 2. The service reads Contact, Region, Surveyor and the applicable standard Price List.
 3. It saves the schedule, secure-token metadata and product snapshot on Opportunity.
-4. A Dataverse webhook can start the process without a premium Power Automate HTTP action. The service creates a standard Dataverse Appointment and sends the customer an email containing a signed public form link and optional Outlook Actionable Message.
+4. A Dataverse webhook can start the process without a premium Power Automate HTTP action. The service creates a standard Dataverse Appointment and sends an email containing the signed Survey and Quotation Form link. Outlook Actionable Messages are used only for the separate installation-confirmation email.
 5. The customer accepts, declines or requests another time, selects products and submits feedback.
 6. The response is saved directly on Opportunity.
 7. Order Confirmation uses the same pattern for installation accept/decline/reschedule; its response is saved directly on the Order.

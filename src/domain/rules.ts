@@ -56,7 +56,32 @@ export function validateSurveySubmission(input: SurveySubmission): SurveySubmiss
   return {
     ...input,
     reason: normalizeOptionalText(input.reason, 2_000, "Survey reason"),
-    feedbackComments: normalizeOptionalText(input.feedbackComments, 2_000, "Survey feedback")
+    feedbackComments: normalizeOptionalText(input.feedbackComments, 2_000, "Survey feedback"),
+    details: input.details ? {
+      address: normalizeOptionalText(input.details.address, 500, "Address"),
+      propertyType: normalizeOptionalText(input.details.propertyType, 250, "Property type"),
+      propertyAge: normalizeOptionalText(input.details.propertyAge, 250, "Property age"),
+      advertisingSource: normalizeOptionalText(input.details.advertisingSource, 250, "Advertising source"),
+      existingHatchType: normalizeOptionalText(input.details.existingHatchType, 250, "Existing hatch type"),
+      flooringRequired: normalizeOptionalText(input.details.flooringRequired, 250, "Flooring required"),
+      ladderRequired: normalizeOptionalText(input.details.ladderRequired, 250, "Ladder required"),
+      lightRequired: normalizeOptionalText(input.details.lightRequired, 250, "Light required"),
+      insulationRequired: normalizeOptionalText(input.details.insulationRequired, 250, "Insulation required"),
+      otherInformation: normalizeOptionalText(input.details.otherInformation, 4_000, "Other information"),
+      quotationDate: normalizeDate(input.details.quotationDate),
+      houseType: normalizeOptionalText(input.details.houseType, 250, "House type"),
+      roofType: normalizeOptionalText(input.details.roofType, 250, "Roof type"),
+      ceilingHeightCm: normalizeMeasurement(input.details.ceilingHeightCm, "Ceiling height"),
+      hatchTopWidthCm: normalizeMeasurement(input.details.hatchTopWidthCm, "Top hatch width"),
+      hatchTopLengthCm: normalizeMeasurement(input.details.hatchTopLengthCm, "Top hatch length"),
+      hatchInsideWidthCm: normalizeMeasurement(input.details.hatchInsideWidthCm, "Inside hatch width"),
+      hatchInsideLengthCm: normalizeMeasurement(input.details.hatchInsideLengthCm, "Inside hatch length"),
+      ladderClearanceWidthCm: normalizeMeasurement(input.details.ladderClearanceWidthCm, "Ladder clearance width"),
+      ladderArcClearanceCm: normalizeMeasurement(input.details.ladderArcClearanceCm, "Ladder arc clearance"),
+      ladderArcType: normalizeOptionalText(input.details.ladderArcType, 100, "Ladder arc type"),
+      planNotes: normalizeOptionalText(input.details.planNotes, 4_000, "Plan"),
+      additionalInfo: normalizeOptionalText(input.details.additionalInfo, 4_000, "Additional information")
+    } : undefined
   };
 }
 
@@ -147,5 +172,18 @@ function normalizeOptionalText(value: string | undefined, maximumLength: number,
   const normalized = value?.trim();
   if (!normalized) return undefined;
   if (normalized.length > maximumLength) throw new Error(`${label} is too long.`);
+  return normalized;
+}
+
+function normalizeMeasurement(value: number | undefined, label: string): number | undefined {
+  if (value === undefined) return undefined;
+  if (!Number.isFinite(value) || value < 0 || value > 100_000) throw new Error(`${label} is invalid.`);
+  return Math.round((value + Number.EPSILON) * 10) / 10;
+}
+
+function normalizeDate(value: string | undefined): string | undefined {
+  const normalized = value?.trim();
+  if (!normalized) return undefined;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) throw new Error("Quotation date is invalid.");
   return normalized;
 }

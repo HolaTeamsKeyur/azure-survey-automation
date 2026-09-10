@@ -11,6 +11,29 @@ Opportunity,Survey Feedback Score,ht_SurveyFeedbackScore,Whole Number 1-5,Yes,Re
 Opportunity,Survey Feedback Comments,ht_SurveyFeedbackComments,Multiline 4000,Yes,Read-only
 Opportunity,Survey Responded On,ht_SurveyRespondedOn,DateTime UserLocal,Yes,Read-only
 Opportunity,Survey Automation Last Error,ht_SurveyAutomationLastError,Multiline 4000,Yes,Admin only
+Opportunity,Survey Address,ht_SurveyAddress,Multiline 500,Yes,Survey Details
+Opportunity,Survey Property Type,ht_SurveyPropertyType,Text 250,Yes,Survey Details
+Opportunity,Survey Property Age,ht_SurveyPropertyAge,Text 250,Yes,Survey Details
+Opportunity,Survey Advertising Source,ht_SurveyAdvertisingSource,Text 250,Yes,Survey Details
+Opportunity,Survey Existing Hatch Type,ht_SurveyExistingHatchType,Text 250,Yes,Survey Details
+Opportunity,Survey Flooring Required,ht_SurveyFlooringRequired,Text 250,Yes,Survey Details
+Opportunity,Survey Ladder Required,ht_SurveyLadderRequired,Text 250,Yes,Survey Details
+Opportunity,Survey Light Required,ht_SurveyLightRequired,Text 250,Yes,Survey Details
+Opportunity,Survey Insulation Required,ht_SurveyInsulationRequired,Text 250,Yes,Survey Details
+Opportunity,Survey Other Information,ht_SurveyOtherInformation,Multiline 4000,Yes,Survey Details
+Opportunity,Quotation Date,ht_QuotationDate,Date Only,Yes,Survey Details
+Opportunity,Survey House Type,ht_SurveyHouseType,Text 250,Yes,Survey Details
+Opportunity,Survey Roof Type,ht_SurveyRoofType,Text 250,Yes,Survey Details
+Opportunity,Survey Ceiling Height cm,ht_SurveyCeilingHeightCm,Decimal precision 1,Yes,Survey Details
+Opportunity,Survey Hatch Top Width cm,ht_SurveyHatchTopWidthCm,Decimal precision 1,Yes,Survey Details
+Opportunity,Survey Hatch Top Length cm,ht_SurveyHatchTopLengthCm,Decimal precision 1,Yes,Survey Details
+Opportunity,Survey Hatch Inside Width cm,ht_SurveyHatchInsideWidthCm,Decimal precision 1,Yes,Survey Details
+Opportunity,Survey Hatch Inside Length cm,ht_SurveyHatchInsideLengthCm,Decimal precision 1,Yes,Survey Details
+Opportunity,Survey Ladder Clearance Width cm,ht_SurveyLadderClearanceWidthCm,Decimal precision 1,Yes,Survey Details
+Opportunity,Survey Ladder Arc Clearance cm,ht_SurveyLadderArcClearanceCm,Decimal precision 1,Yes,Survey Details
+Opportunity,Survey Ladder Arc Type,ht_SurveyLadderArcType,Text 100,Yes,Survey Details
+Opportunity,Survey Plan Notes,ht_SurveyPlanNotes,Multiline 4000,Yes,Survey Details
+Opportunity,Survey Additional Information,ht_SurveyAdditionalInfo,Multiline 4000,Yes,Survey Details
 Order Confirmation,Installation Customer Response,ht_InstallationResponseKey,Text 50,Yes,Read-only
 Order Confirmation,Installation Recipient Email,ht_InstallationRecipientEmail,Email 200,Yes,Read-only
 Order Confirmation,Installation Response Expires At,ht_InstallationResponseExpiresAt,DateTime TimeZoneIndependent,Yes,Read-only

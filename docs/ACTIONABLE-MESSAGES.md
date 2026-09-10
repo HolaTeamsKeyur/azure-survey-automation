@@ -2,7 +2,7 @@
 
 ## Selected model
 
-Phase 1 uses Adaptive Card 1.0 with Outlook `Action.Http`, posting to an anonymous Azure Function endpoint that validates the Microsoft Entra action token and the signed session token. The full Azure form link is always present.
+Phase 1 uses Adaptive Card 1.0 with Outlook `Action.Http` only in the installation-confirmation email. It posts to an Azure Function endpoint that validates the Microsoft Entra action token and signed installation token. The survey email contains a normal link to the separate Survey and Quotation Form; it does not contain a survey Adaptive Card.
 
 Do not use `Action.Submit`; it is not supported by the classic Outlook Actionable Message model. Do not silently switch to Adaptive Card 1.4 `Action.Execute`: that requires the Universal Actions/Azure Bot design and separate testing.
 
@@ -40,7 +40,7 @@ The API returns `CARD-ACTION-STATUS` so Outlook can show a human-readable result
 
 - A card may not render because the client is unsupported, the provider is not approved for the recipient, a tenant has not consented, or a security gateway rewrote the message.
 - Shared and group mailbox scenarios have product limitations.
-- Actionable Messages are intended for simple transactional actions. The full product catalogue and complex survey remain on the hosted form.
+- Actionable Messages are used only for the simple installation accept/decline/reschedule actions. The product catalogue and survey remain entirely on the hosted form.
 - Messages older than the supported action window may stop accepting actions; the hosted token has its own shorter expiry.
 - Global provider approval has sender-quality and operational requirements and should not be assumed.
 
