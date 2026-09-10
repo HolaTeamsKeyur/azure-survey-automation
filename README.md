@@ -1,5 +1,17 @@
 # HolaTeams survey and installation-response demonstration
 
+## Test the complete flow locally
+
+Microsoft identity access is not required for the safe mock demo:
+
+```powershell
+npm ci
+npm run check
+npm run demo:local
+```
+
+Then open `http://127.0.0.1:4280`. See [the local demo guide](docs/LOCAL-DEMO.md) for the test sequence.
+
 Public survey/confirmation form and email automation using existing Dataverse tables. It does not require Customer Insights/Journeys, Power Pages or any new Dataverse table.
 
 ## Demonstration scope

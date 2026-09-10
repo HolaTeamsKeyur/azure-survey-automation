@@ -24,8 +24,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - name: Install, build and test
-        run: npm ci && npm run check
+      - name: Install dependencies
+        run: npm ci
+      - name: Compile TypeScript
+        run: npm run build
+      - name: Run automated tests
+        run: npm test
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
