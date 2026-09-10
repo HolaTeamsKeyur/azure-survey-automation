@@ -49,6 +49,8 @@ Never place production secrets in source control or commit `local.settings.json`
 - `docs/DATAVERSE-MANUAL-BUILD.md` - exact separate-solution steps and field list
 - `docs/DATAVERSE-MANUAL-EXECUTION-GUIDE.md` - click-by-click Dataverse build sheet for manual execution
 - `docs/STATIC-WEB-APP-SETUP.md` - Free hosting and deployment configuration
+- `docs/AZURE-DEPLOY-NOW.md` - GitHub/Azure deployment and environment configuration
+- `docs/ADMIN-IDENTITY-REQUEST.md` - short Entra/Graph/Dataverse administrator hand-off when app-registration access is unavailable
 - `docs/API-CONTRACT.md` - HTTP endpoints
 - `docs/ACTIONABLE-MESSAGES.md` - Outlook registration/security
 - `docs/FIT-GAP.md` - platform fit and remaining decisions
