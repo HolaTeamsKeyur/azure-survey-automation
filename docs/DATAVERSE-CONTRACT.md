@@ -18,6 +18,31 @@ erDiagram
 
 The Region's existing `ht_franchise` lookup points to Account. The Account's standard Default Price List provides the regional product catalogue when the Opportunity does not already have a Price List.
 
+## Regional catalogue structure
+
+Products are global master records and must not be duplicated for each franchise. Regional price and display differences belong on Price List Items:
+
+1. Create or reuse the Franchise Account.
+2. Create one Price List for the Region/currency.
+3. Set the Account's standard `defaultpricelevelid` to that Price List.
+4. Create or reuse the `ht_region` row and set its `ht_franchise` lookup to the Account.
+5. Reuse the global Products and add one Price List Item per product required in that Region.
+6. On each Price List Item set `ht_showincustomersurvey`, `ht_surveydisplayorder`, `ht_surveycustomerdescription`, `ht_surveypricedisplaytext`, and `ht_surveypriceisindicative`.
+
+The Opportunity may override the inherited regional catalogue by setting its standard `pricelevelid`. Otherwise the application resolves `Opportunity -> Region -> Franchise Account -> Default Price List`.
+
+### Brighton pilot seeded on 10 September 2026
+
+- Region: `Brighton` (`BRIGHTON`)
+- Franchise Account: `Access4Lofts Brighton`
+- Account number: `A4L-BRIGHTON`
+- Price List: `Access4Lofts Brighton - GBP Survey`
+- Currency: GBP
+- Survey-enabled Price List Items: 21
+- Global products created: 21, using stable `A4L-*` product numbers
+
+The pilot GBP exchange rate was seeded as 1.3518 USD per GBP because this environment's base currency is USD. Finance must validate/update that rate before production invoicing.
+
 ## Existing columns reused
 
 ### Opportunity
