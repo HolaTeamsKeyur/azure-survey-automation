@@ -1,6 +1,6 @@
-import { z } from "zod";
-
-const guid = z.string().uuid();
+// Dataverse record IDs are GUID-shaped values but are not guaranteed to carry
+// an RFC UUID version nibble. Do not use a strict RFC UUID validator here.
+const dataverseGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class WebhookPayloadError extends Error {}
 
@@ -25,8 +25,9 @@ export function extractDataverseRecordId(payload: unknown, directProperty: strin
     targetId(body.inputParameters)
   ];
   for (const candidate of candidates) {
-    const parsed = guid.safeParse(candidate);
-    if (parsed.success) return parsed.data;
+    if (typeof candidate !== "string") continue;
+    const value = candidate.trim().replace(/^\{(.+)\}$/, "$1");
+    if (dataverseGuid.test(value)) return value;
   }
   throw new WebhookPayloadError(`Request requires ${directProperty} or a Dataverse PrimaryEntityId.`);
 }

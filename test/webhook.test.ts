@@ -8,6 +8,12 @@ test("extracts the direct demonstration payload", () => {
   assert.equal(extractDataverseRecordId({ opportunityId: id }, "opportunityId"), id);
 });
 
+test("accepts Dataverse GUIDs that do not contain an RFC UUID version nibble", () => {
+  const dataverseId = "986d8a4f-05ad-f111-aaac-6045bd00754c";
+  assert.equal(extractDataverseRecordId({ opportunityId: dataverseId }, "opportunityId"), dataverseId);
+  assert.equal(extractDataverseRecordId({ opportunityId: `{${dataverseId}}` }, "opportunityId"), dataverseId);
+});
+
 test("extracts PrimaryEntityId from a Dataverse webhook", () => {
   assert.equal(extractDataverseRecordId({ PrimaryEntityId: id }, "opportunityId"), id);
 });
