@@ -65,6 +65,7 @@ resource apiSettings 'Microsoft.Web/staticSites/config@2023-12-01' = {
     AUTOMATION_INGRESS_KEY: automationIngressKey
     ENABLE_ACTIONABLE_MESSAGES: string(enableActionableMessages)
     REQUIRE_SURVEYOR_AUTH: 'true'
+    SURVEYOR_ACCESS_MODE: 'tenant'
     ENABLE_NEW_PRODUCT_REQUESTS: 'false'
     ENABLE_DATAVERSE_SURVEY_LAYOUT: 'false'
     ENABLE_AUTO_SCHEDULING: 'false'

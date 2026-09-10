@@ -16,7 +16,7 @@ Production-oriented Dynamics 365 / Dataverse property survey workflow.
 
 ## Security boundaries
 
-- Surveyor: Azure Static Web Apps' built-in Entra sign-in; the API then restricts access to the configured HolaTeams tenant and assigned surveyor email.
+- Surveyor: Azure Static Web Apps' built-in Entra sign-in; the API restricts access to the configured HolaTeams tenant. Shared-mailbox links can be completed by an authenticated tenant employee.
 - Backend: Dataverse Application User/service principal; no Graph permission when Power Automate sends mail.
 - Power Automate: Office 365 Outlook connector sends survey and installation messages.
 - Survey link: signed, expiring token plus tenant and assigned-email checks.

@@ -4,7 +4,7 @@ import { correlationId, publicFormErrorMessage } from "../http/responses.js";
 import { verifySurveyToken } from "../security/tokens.js";
 import { SurveyAutomationService } from "../services/surveyAutomation.js";
 import { renderSurveyForm, renderSurveyThanks, surveyPageHeaders } from "../views/surveyPage.js";
-import { assertSurveyorAccess, readClientPrincipal, surveyorLoginUrl } from "../security/clientPrincipal.js";
+import { assertSurveyorAccess, readClientPrincipal, SurveyorAccessError, surveyorLoginUrl } from "../security/clientPrincipal.js";
 import type { NewProductRequest } from "../domain/models.js";
 
 async function handler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -43,6 +43,9 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
     return { status: 200, headers: surveyPageHeaders(requestId), body: renderSurveyThanks(result.productCount, result.requestedProductCount, result.quoteId) };
   } catch (error) {
     context.error(`Survey form request failed. Correlation ID: ${requestId}`, error);
+    if (error instanceof SurveyorAccessError) {
+      return { status: 403, headers: surveyPageHeaders(requestId), body: accessDeniedPage(error.message) };
+    }
     return { status: 400, headers: surveyPageHeaders(requestId), body: errorPage(publicFormErrorMessage()) };
   }
 }
@@ -74,4 +77,5 @@ function readNewProductRequests(form: FormData): NewProductRequest[] {
   return requests;
 }
 function errorPage(message: string): string { return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unable to continue</title><style>body{font-family:Arial,sans-serif;max-width:700px;margin:10vh auto;padding:2rem}h1{color:#0969ad}</style></head><body><h1>Unable to continue</h1><p>${escapeHtml(message)}</p><p>Please contact your local Access4Lofts team.</p></body></html>`; }
+function accessDeniedPage(message: string): string { return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Access denied</title><style>body{font-family:Arial,sans-serif;max-width:700px;margin:10vh auto;padding:2rem}h1{color:#0969ad}a{color:#0969ad}</style></head><body><h1>Access denied</h1><p>${escapeHtml(message)}</p><p>Sign in with an authorised HolaTeams Microsoft 365 account, or contact the Access4Lofts office.</p><p><a href="/.auth/logout?post_logout_redirect_uri=/">Sign out and use another account</a></p></body></html>`; }
 function escapeHtml(value: string): string { return value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!); }

@@ -19,6 +19,7 @@ test("loads a safe browser-link-only configuration", () => {
   assert.equal(config.sendInstallationEmail, true);
   assert.equal(config.enableAutoScheduling, false);
   assert.equal(config.requireSurveyorAuth, true);
+  assert.equal(config.surveyorAccessMode, "tenant");
   assert.equal(config.dataverseUrl, valid.DATAVERSE_URL);
 });
 

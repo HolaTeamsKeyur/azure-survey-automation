@@ -11,6 +11,8 @@ export interface ClientPrincipal {
   claims?: ClientPrincipalClaim[];
 }
 
+export class SurveyorAccessError extends Error {}
+
 export function readClientPrincipal(request: HttpRequest): ClientPrincipal | undefined {
   const encoded = request.headers.get("x-ms-client-principal");
   if (!encoded) return undefined;
@@ -26,12 +28,12 @@ export function readClientPrincipal(request: HttpRequest): ClientPrincipal | und
 export function assertSurveyorAccess(config: AppConfig, principal: ClientPrincipal | undefined, assignedEmail: string): void {
   if (!config.requireSurveyorAuth) return;
   if (!principal || !principal.userRoles.includes("authenticated") || principal.identityProvider !== "aad") {
-    throw new Error("Microsoft Entra sign-in is required.");
+    throw new SurveyorAccessError("Microsoft Entra sign-in is required.");
   }
   const claims = new Map((principal.claims ?? []).map(claim => [claim.typ.toLowerCase(), claim.val]));
   const tenantId = claim(claims, "tid", "http://schemas.microsoft.com/identity/claims/tenantid");
   if (config.azureTenantId && tenantId?.toLowerCase() !== config.azureTenantId) {
-    throw new Error("This account is not in the authorised Microsoft Entra tenant.");
+    throw new SurveyorAccessError("This account is not in the authorised Microsoft Entra tenant.");
   }
   const signedInEmail = claim(
     claims,
@@ -42,8 +44,8 @@ export function assertSurveyorAccess(config: AppConfig, principal: ClientPrincip
     "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
     "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/upn"
   ) ?? principal.userDetails;
-  if (normalizeEmail(signedInEmail) !== normalizeEmail(assignedEmail)) {
-    throw new Error("This survey is assigned to a different surveyor.");
+  if (config.surveyorAccessMode === "assigned" && normalizeEmail(signedInEmail) !== normalizeEmail(assignedEmail)) {
+    throw new SurveyorAccessError("This survey is assigned to a different surveyor.");
   }
 }
 

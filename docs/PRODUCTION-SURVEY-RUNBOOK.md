@@ -27,7 +27,7 @@ Rotate the previously used client secret before production and store only the ne
 
 Keep `a4l-survey-dev` on Azure Static Web Apps Free and use its preconfigured Microsoft Entra provider. No second app registration or surveyor-portal client secret is required.
 
-The email link first opens `/.auth/login/aad` and returns to the signed survey URL. Although the Free provider can display sign-in for Microsoft accounts outside HolaTeams, the API independently validates all three controls: a signed survey token, the HolaTeams Entra tenant ID from `AZURE_TENANT_ID`, and the signed-in email matching the Opportunity's assigned Surveyor internal email. An outside account, another employee, or a forwarded link is rejected.
+The email link first opens `/.auth/login/aad` and returns to the signed survey URL. Although the Free provider can display sign-in for Microsoft accounts outside HolaTeams, the API validates a signed survey token and the HolaTeams Entra tenant ID from `AZURE_TENANT_ID`. With `SURVEYOR_ACCESS_MODE=tenant`, any authenticated HolaTeams employee who receives the signed link can complete it; external Microsoft accounts remain blocked. Set the mode to `assigned` only when every survey is sent to an individually sign-in-capable surveyor mailbox.
 
 This keeps hosting free during development and UAT. A separate single-tenant custom provider remains an optional Standard-plan hardening step before a future production SLA decision; it is not required for the current build.
 
@@ -178,6 +178,7 @@ SEND_INSTALLATION_EMAIL=false
 CREATE_QUOTE_ON_SUBMIT=true
 ENABLE_AUTO_SCHEDULING=false
 REQUIRE_SURVEYOR_AUTH=true
+SURVEYOR_ACCESS_MODE=tenant
 ENABLE_NEW_PRODUCT_REQUESTS=true
 ENABLE_DATAVERSE_SURVEY_LAYOUT=true
 AZURE_TENANT_ID=<your Entra tenant ID>

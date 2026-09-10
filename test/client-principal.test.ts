@@ -4,7 +4,7 @@ import type { HttpRequest } from "@azure/functions";
 import { loadConfig } from "../src/config.js";
 import { assertSurveyorAccess, readClientPrincipal, surveyorLoginUrl } from "../src/security/clientPrincipal.js";
 
-const config = loadConfig({ DATAVERSE_URL: "https://example.crm.dynamics.com", GRAPH_SENDER_MAILBOX: "surveys@example.com", PUBLIC_BASE_URL: "https://example.azurestaticapps.net", SURVEY_TOKEN_SECRET: "12345678901234567890123456789012", AUTOMATION_INGRESS_KEY: "123456789012345678901234", AZURE_TENANT_ID: "11111111-1111-4111-8111-111111111111" });
+const config = loadConfig({ DATAVERSE_URL: "https://example.crm.dynamics.com", GRAPH_SENDER_MAILBOX: "surveys@example.com", PUBLIC_BASE_URL: "https://example.azurestaticapps.net", SURVEY_TOKEN_SECRET: "12345678901234567890123456789012", AUTOMATION_INGRESS_KEY: "123456789012345678901234", AZURE_TENANT_ID: "11111111-1111-4111-8111-111111111111", SURVEYOR_ACCESS_MODE: "assigned" });
 
 function requestFor(email: string, tenantId = config.azureTenantId): HttpRequest {
   const value = { identityProvider: "aad", userId: "user-1", userDetails: email, userRoles: ["anonymous", "authenticated"], claims: [{ typ: "preferred_username", val: email }, { typ: "tid", val: tenantId }] };
@@ -16,6 +16,12 @@ test("allows only the assigned surveyor from the configured tenant", () => {
   assert.doesNotThrow(() => assertSurveyorAccess(config, principal, "Surveyor@example.com"));
   assert.throws(() => assertSurveyorAccess(config, principal, "other@example.com"), /different surveyor/);
   assert.throws(() => assertSurveyorAccess(config, readClientPrincipal(requestFor("surveyor@example.com", "22222222-2222-4222-8222-222222222222")), "surveyor@example.com"), /authorised.*tenant/i);
+});
+
+test("tenant access mode supports a shared survey mailbox", () => {
+  const tenantConfig = { ...config, surveyorAccessMode: "tenant" as const };
+  const principal = readClientPrincipal(requestFor("engineer@holateams.com"));
+  assert.doesNotThrow(() => assertSurveyorAccess(tenantConfig, principal, "services@holateams.com"));
 });
 
 test("builds an Entra login wrapper for the signed form route", () => {
