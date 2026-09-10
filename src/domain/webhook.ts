@@ -4,6 +4,15 @@ const guid = z.string().uuid();
 
 export class WebhookPayloadError extends Error {}
 
+/** Normalises JSON copied from rich-text editors and Power Automate string bodies. */
+export function parseWebhookPayload(raw: string): unknown {
+  const normalised = raw.replace(/\u00a0/g, " ").trim();
+  if (!normalised) throw new WebhookPayloadError("Request body must contain JSON.");
+  const parsed: unknown = JSON.parse(normalised);
+  if (typeof parsed !== "string") return parsed;
+  return JSON.parse(parsed.replace(/\u00a0/g, " "));
+}
+
 /** Accepts either the small manual payload or a Dataverse RemoteExecutionContext. */
 export function extractDataverseRecordId(payload: unknown, directProperty: string): string {
   if (!payload || typeof payload !== "object") throw new WebhookPayloadError("Request body must be a JSON object.");
