@@ -30,6 +30,7 @@ export class DataverseClient {
         "Content-Type": "application/json; charset=utf-8",
         "OData-MaxVersion": "4.0",
         "OData-Version": "4.0",
+        Prefer: 'odata.include-annotations="OData.Community.Display.V1.FormattedValue"',
         ...(init.headers ?? {})
       }
     });
@@ -43,7 +44,9 @@ export class DataverseClient {
   async getOpportunityContext(opportunityId: string): Promise<OpportunityContext> {
     const id = normalizeGuid(opportunityId);
     const row = await this.request<Record<string, unknown>>(
-      `opportunities(${id})?$select=opportunityid,name,ht_propertypostcode,ht_streetname,ht_surveystart,ht_surveyfinish,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_transactioncurrencyid_value,_ht_surveyor_value&` +
+      `opportunities(${id})?$select=opportunityid,name,ht_propertypostcode,ht_streetname,ht_surveystart,ht_surveyfinish,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_transactioncurrencyid_value,_ht_surveyor_value,` +
+      `ht_propertytype,ht_propertyage,ht_existinghatchtype,ht_loftboardingrequired,ht_loftladderrequired,ht_lightrequired,ht_insulationrequired,` +
+      `ht_surveyaddress,ht_surveypropertytype,ht_surveypropertyage,ht_surveyadvertisingsource,ht_surveyexistinghatchtype,ht_surveyflooringrequired,ht_surveyladderrequired,ht_surveylightrequired,ht_surveyinsulationrequired,ht_surveyotherinformation,ht_quotationdate,ht_surveyhousetype,ht_surveyrooftype,ht_surveyceilingheightcm,ht_surveyhatchtopwidthcm,ht_surveyhatchtoplengthcm,ht_surveyhatchinsidewidthcm,ht_surveyhatchinsidelengthcm,ht_surveyladderclearancewidthcm,ht_surveyladderarcclearancecm,ht_surveyladderarctype,ht_surveyplannotes,ht_surveyadditionalinfo&` +
       `$expand=parentcontactid($select=contactid,fullname,emailaddress1,mobilephone),ht_Region($select=ht_regionid,ht_name,ht_regioncode,ht_email,ht_telephone,_ht_franchise_value)`
     );
     const contact = row.parentcontactid as Record<string, unknown> | undefined;
@@ -53,12 +56,12 @@ export class DataverseClient {
 
     let priceListId = stringOrUndefined(row._pricelevelid_value);
     const franchiseId = stringOrUndefined(region._ht_franchise_value);
-    if (!priceListId && franchiseId) {
-      const account = await this.request<Record<string, unknown>>(
-        `accounts(${normalizeGuid(franchiseId)})?$select=_defaultpricelevelid_value`
-      );
-      priceListId = stringOrUndefined(account._defaultpricelevelid_value);
-    }
+    const franchise = franchiseId
+      ? await this.request<Record<string, unknown>>(
+        `accounts(${normalizeGuid(franchiseId)})?$select=name,_defaultpricelevelid_value`
+      )
+      : undefined;
+    if (!priceListId) priceListId = stringOrUndefined(franchise?._defaultpricelevelid_value);
     const surveyorUserId = stringOrUndefined(row._ht_surveyor_value);
     let surveyorMailbox: string | undefined;
     let surveyorName: string | undefined;
@@ -80,6 +83,31 @@ export class DataverseClient {
       surveyorUserId,
       scheduledStart: stringOrUndefined(row.ht_surveystart),
       scheduledEnd: stringOrUndefined(row.ht_surveyfinish),
+      surveyDetails: {
+        address: stringOrUndefined(row.ht_surveyaddress) ?? stringOrUndefined(row.ht_streetname),
+        propertyType: stringOrUndefined(row.ht_surveypropertytype) ?? formattedOrRaw(row, "ht_propertytype"),
+        propertyAge: stringOrUndefined(row.ht_surveypropertyage) ?? formattedOrRaw(row, "ht_propertyage"),
+        advertisingSource: stringOrUndefined(row.ht_surveyadvertisingsource),
+        existingHatchType: stringOrUndefined(row.ht_surveyexistinghatchtype) ?? formattedOrRaw(row, "ht_existinghatchtype"),
+        flooringRequired: stringOrUndefined(row.ht_surveyflooringrequired) ?? formattedOrBoolean(row, "ht_loftboardingrequired"),
+        ladderRequired: stringOrUndefined(row.ht_surveyladderrequired) ?? formattedOrBoolean(row, "ht_loftladderrequired"),
+        lightRequired: stringOrUndefined(row.ht_surveylightrequired) ?? formattedOrRaw(row, "ht_lightrequired"),
+        insulationRequired: stringOrUndefined(row.ht_surveyinsulationrequired) ?? formattedOrBoolean(row, "ht_insulationrequired"),
+        otherInformation: stringOrUndefined(row.ht_surveyotherinformation),
+        quotationDate: dateOnlyOrUndefined(row.ht_quotationdate),
+        houseType: stringOrUndefined(row.ht_surveyhousetype),
+        roofType: stringOrUndefined(row.ht_surveyrooftype),
+        ceilingHeightCm: numberOrUndefined(row.ht_surveyceilingheightcm),
+        hatchTopWidthCm: numberOrUndefined(row.ht_surveyhatchtopwidthcm),
+        hatchTopLengthCm: numberOrUndefined(row.ht_surveyhatchtoplengthcm),
+        hatchInsideWidthCm: numberOrUndefined(row.ht_surveyhatchinsidewidthcm),
+        hatchInsideLengthCm: numberOrUndefined(row.ht_surveyhatchinsidelengthcm),
+        ladderClearanceWidthCm: numberOrUndefined(row.ht_surveyladderclearancewidthcm),
+        ladderArcClearanceCm: numberOrUndefined(row.ht_surveyladderarcclearancecm),
+        ladderArcType: stringOrUndefined(row.ht_surveyladderarctype),
+        planNotes: stringOrUndefined(row.ht_surveyplannotes),
+        additionalInfo: stringOrUndefined(row.ht_surveyadditionalinfo)
+      },
       customer: {
         contactId: String(contact.contactid),
         name: String(contact.fullname ?? "Customer"),
@@ -89,6 +117,8 @@ export class DataverseClient {
       region: {
         id: String(region.ht_regionid),
         name: String(region.ht_name ?? "Region"),
+        franchiseId,
+        franchiseName: stringOrUndefined(franchise?.name),
         code: stringOrUndefined(region.ht_regioncode),
         telephone: stringOrUndefined(region.ht_telephone),
         senderMailbox: String(region.ht_email ?? ""),
@@ -451,6 +481,26 @@ function stringOrUndefined(value: unknown): string | undefined {
 function numberOr(value: unknown, fallback: number): number {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
+}
+function numberOrUndefined(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+}
+function formattedOrRaw(row: Record<string, unknown>, logicalName: string): string | undefined {
+  return stringOrUndefined(row[`${logicalName}@OData.Community.Display.V1.FormattedValue`])
+    ?? stringOrUndefined(row[logicalName]);
+}
+function formattedOrBoolean(row: Record<string, unknown>, logicalName: string): string | undefined {
+  const formatted = stringOrUndefined(row[`${logicalName}@OData.Community.Display.V1.FormattedValue`]);
+  if (formatted) return formatted;
+  const value = row[logicalName];
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return stringOrUndefined(value);
+}
+function dateOnlyOrUndefined(value: unknown): string | undefined {
+  const result = stringOrUndefined(value);
+  return result?.slice(0, 10);
 }
 function splitIds(value: unknown): string[] {
   return String(value ?? "").split(",").map(item => item.trim()).filter(Boolean);

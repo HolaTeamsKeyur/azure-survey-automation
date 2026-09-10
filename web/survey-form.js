@@ -1,30 +1,42 @@
 (() => {
   const money = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
-  const sections = [...document.querySelectorAll(".workflow-section")];
-  const tabs = [...document.querySelectorAll(".step-tab")];
-  const previous = document.querySelector("#previous-step");
-  const next = document.querySelector("#next-step");
-  let activeIndex = 0;
+  const rows = [...document.querySelectorAll(".product-row")];
+  const search = document.querySelector("#product-search");
+  const toggle = document.querySelector("#toggle-products");
+  const resultCount = document.querySelector("#product-result-count");
+  const noResults = document.querySelector("#no-product-results");
+  let expanded = false;
 
-  const showStep = index => {
-    activeIndex = Math.max(0, Math.min(index, sections.length - 1));
-    sections.forEach((section, itemIndex) => section.classList.toggle("is-active", itemIndex === activeIndex));
-    tabs.forEach((tab, itemIndex) => {
-      tab.classList.toggle("is-active", itemIndex === activeIndex);
-      tab.setAttribute("aria-current", itemIndex === activeIndex ? "step" : "false");
+  const refreshVisibility = () => {
+    const query = search?.value.trim().toLowerCase() ?? "";
+    let visible = 0;
+    let matching = 0;
+    rows.forEach(row => {
+      const matches = !query || row.dataset.productSearch.includes(query);
+      if (matches) matching++;
+      const quantity = Number(row.querySelector("input[type=number]").value || 0);
+      const isInitial = Number(row.dataset.productIndex) < 10;
+      const show = matches && (Boolean(query) || expanded || isInitial || quantity > 0);
+      row.hidden = !show;
+      if (show) visible++;
     });
-    if (previous) previous.hidden = activeIndex === 0;
-    if (next) next.hidden = activeIndex === sections.length - 1;
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (resultCount) {
+      resultCount.textContent = query
+        ? `${matching} product${matching === 1 ? "" : "s"} found`
+        : `Showing ${visible} of ${rows.length} products`;
+    }
+    if (toggle) {
+      toggle.hidden = Boolean(query);
+      toggle.textContent = expanded ? "Show top 10" : "Show all products";
+      toggle.setAttribute("aria-expanded", String(expanded));
+    }
+    if (noResults) noResults.hidden = matching !== 0;
   };
-  tabs.forEach((tab, index) => tab.addEventListener("click", () => showStep(index)));
-  previous?.addEventListener("click", () => showStep(activeIndex - 1));
-  next?.addEventListener("click", () => showStep(activeIndex + 1));
 
-  const refresh = () => {
+  const refreshTotals = () => {
     let subtotal = 0;
     let selectedCount = 0;
-    document.querySelectorAll(".product-row").forEach(row => {
+    rows.forEach(row => {
       const quantity = Number(row.querySelector("input[type=number]").value || 0);
       const total = Math.round((Number(row.dataset.unitPrice) * quantity + Number.EPSILON) * 100) / 100;
       row.querySelector(".line-total").textContent = quantity > 0 ? money.format(total) : "—";
@@ -36,55 +48,28 @@
     const subtotalOutput = document.querySelector("#subtotal");
     const vatOutput = document.querySelector("#vat-total");
     const grandOutput = document.querySelector("#grand-total");
+    const selectedOutput = document.querySelector("#selected-product-count");
     if (subtotalOutput) subtotalOutput.textContent = money.format(subtotal);
     if (vatOutput) vatOutput.textContent = money.format(vat);
     if (grandOutput) grandOutput.textContent = money.format(subtotal + vat);
-    const selectedOutput = document.querySelector("#selected-product-count");
     if (selectedOutput) selectedOutput.textContent = String(selectedCount);
+    refreshVisibility();
   };
-  document.querySelectorAll(".product-row input[type=number]").forEach(input => input.addEventListener("input", refresh));
-  document.querySelector("#product-search")?.addEventListener("input", event => {
-    const query = event.currentTarget.value.trim().toLowerCase();
-    document.querySelectorAll(".product-row").forEach(row => { row.hidden = Boolean(query) && !row.dataset.productName.includes(query); });
-  });
 
-  let requestIndex = 0;
-  const updateRequestCount = () => {
-    const count = document.querySelectorAll(".new-product-row").length;
-    const output = document.querySelector("#requested-product-count");
-    if (output) output.textContent = String(count);
-  };
-  document.querySelector("#add-new-product")?.addEventListener("click", () => {
-    if (requestIndex >= 10) return;
-    const template = document.querySelector("#new-product-template");
-    const wrapper = document.createElement("div");
-    wrapper.innerHTML = template.innerHTML.replaceAll("__INDEX__", String(requestIndex++));
-    const row = wrapper.firstElementChild;
-    row.querySelector("input[name^=newProductName]").required = true;
-    row.querySelector("input[name^=newProductQuantity]").required = true;
-    row.querySelector(".remove-new-product").addEventListener("click", () => { row.remove(); updateRequestCount(); });
-    document.querySelector("#new-product-list").append(row);
-    row.querySelector("input").focus();
-    updateRequestCount();
-  });
+  rows.forEach(row => row.querySelector("input[type=number]").addEventListener("input", refreshTotals));
+  search?.addEventListener("input", refreshVisibility);
+  toggle?.addEventListener("click", () => { expanded = !expanded; refreshVisibility(); });
 
-  const form = document.querySelector("#survey-form");
-  if (form) form.noValidate = true;
-  form?.addEventListener("submit", event => {
+  document.querySelector("#survey-form")?.addEventListener("submit", event => {
     if (!event.currentTarget.checkValidity()) {
       event.preventDefault();
-      const invalid = event.currentTarget.querySelector(":invalid");
-      const invalidSection = invalid?.closest(".workflow-section");
-      const invalidIndex = sections.indexOf(invalidSection);
-      if (invalidIndex >= 0) showStep(invalidIndex);
-      invalid?.reportValidity();
+      event.currentTarget.reportValidity();
       return;
     }
     const submit = event.currentTarget.querySelector("button[type=submit]");
     submit.disabled = true;
     submit.textContent = "Submitting survey…";
   });
-  refresh();
-  updateRequestCount();
-  showStep(0);
+
+  refreshTotals();
 })();

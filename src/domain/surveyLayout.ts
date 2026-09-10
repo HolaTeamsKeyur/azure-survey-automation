@@ -18,12 +18,12 @@ export const defaultSurveyLayout: SurveyLayout = {
   version: 1,
   title: "Property survey",
   sections: [
-    { key: "job", title: "Job details", helpText: "Information from Dynamics 365", visible: true },
-    { key: "property", title: "Property", helpText: "Confirm the information while on site", visible: true },
+    { key: "job", title: "Customer", helpText: "Information from Dynamics 365", visible: true },
+    { key: "property", title: "Survey details", helpText: "Information from the enquiry is already filled in. Open to check or update it on site.", visible: true },
     { key: "measurements", title: "Measurements", helpText: "Enter measurements in centimetres", visible: true },
     { key: "notes", title: "Plan and notes", visible: true },
-    { key: "products", title: "Products", helpText: "Products and prices come from the opportunity price list", visible: true },
-    { key: "new_products", title: "Product not listed?", helpText: "Request a product for office review; it will not be priced automatically", visible: true },
+    { key: "products", title: "Select products", helpText: "Enter a quantity to add a product to this opportunity.", visible: true },
+    { key: "new_products", title: "Product not listed?", helpText: "Request a product for office review; it will not be priced automatically", visible: false },
     { key: "review", title: "Review and submit", visible: true }
   ]
 };

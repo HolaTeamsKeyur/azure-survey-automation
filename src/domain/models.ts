@@ -19,6 +19,8 @@ export type InstallationSessionStatus =
 export interface RegionContext {
   id: string;
   name: string;
+  franchiseId?: string;
+  franchiseName?: string;
   code?: string;
   telephone?: string;
   senderMailbox: string;
@@ -51,6 +53,7 @@ export interface OpportunityContext {
   surveyorUserId?: string;
   scheduledStart?: string;
   scheduledEnd?: string;
+  surveyDetails?: SurveyDetails;
 }
 
 export interface ProductOption {

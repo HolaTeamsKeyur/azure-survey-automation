@@ -19,7 +19,8 @@ const unitId = "10000000-0000-4000-8000-000000000005";
 const context: OpportunityContext = {
   opportunityId: "10000000-0000-4000-8000-000000000002", name: "Brighton Enquiry — Alex Morgan", streetName: "14 Preston Road, Brighton", propertyPostcode: "BN1 4QF",
   customer: { contactId: "10000000-0000-4000-8000-000000000001", name: "Alex Morgan", email: "alex.morgan@email.com" },
-  region: { id: "50000000-0000-4000-8000-000000000001", name: "Brighton", telephone: "01273 034001", senderMailbox: "brighton@access4lofts.co.uk", timeZone: "Europe/London", surveyDurationMinutes: 60, businessDayStartHour: 9, businessDayEndHour: 17, autoScheduleEnabled: true }
+  surveyDetails: { propertyType: "Semi-detached", propertyAge: "1930s", existingHatchType: "Push-up hatch" },
+  region: { id: "50000000-0000-4000-8000-000000000001", name: "Brighton Region", franchiseName: "Brighton", telephone: "01273 034001", senderMailbox: "brighton@access4lofts.co.uk", timeZone: "Europe/London", surveyDurationMinutes: 60, businessDayStartHour: 9, businessDayEndHour: 17, autoScheduleEnabled: true }
 };
 const products: ProductOption[] = [
   p(1, "New uPVC hatch (straight replace)", 124.17), p(2, "New uPVC hatch (enlarge hatch size) *", 207.50, true), p(3, "Relocate hatch and fit uPVC hatch *", 210, true),
