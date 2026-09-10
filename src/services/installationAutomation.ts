@@ -15,11 +15,16 @@ export class InstallationAutomationService {
     private readonly graph = new GraphClient()
   ) {}
 
-  async request(orderId: string): Promise<{ sessionId: string; reused: boolean }> {
+  async request(orderId: string): Promise<InstallationRequestResult> {
     const context = await this.dataverse.getInstallationContext(orderId);
     const existing = await this.dataverse.findOpenInstallationSession(context.orderId);
     if (existing && !["expired", "failed"].includes(existing.status)) {
-      return { sessionId: existing.id, reused: true };
+      const token = await issueInstallationToken(this.config, {
+        sessionId: existing.id,
+        tokenId: existing.tokenId,
+        recipientHash: hashEmail(existing.recipientEmail)
+      });
+      return installationRequestResult(this.config.publicBaseUrl, context, existing.id, token, true);
     }
 
     const tokenId = randomUUID();
@@ -51,16 +56,18 @@ export class InstallationAutomationService {
     const fallback = `<p>Hello ${escapeHtml(context.recipientName)},</p><p>Please confirm your installation: ${escapeHtml(context.scheduledStart)} to ${escapeHtml(context.scheduledEnd)}.</p><p><a href="${escapeHtml(formUrl)}">Open the secure confirmation form</a></p>`;
 
     try {
-      await this.graph.sendActionableMail(
-        context.senderMailbox || this.config.GRAPH_SENDER_MAILBOX,
-        context.recipientEmail,
-        `Confirm your Access4Lofts installation - ${context.orderName}`,
-        fallback,
-        card
-      );
+      if (this.config.sendInstallationEmail) {
+        await this.graph.sendActionableMail(
+          context.senderMailbox || this.config.GRAPH_SENDER_MAILBOX,
+          context.recipientEmail,
+          `Confirm your Access4Lofts installation - ${context.orderName}`,
+          fallback,
+          card
+        );
+      }
       assertInstallationTransition("draft", "sent");
       await this.dataverse.setInstallationSessionStatus(session.id, "sent", session.version);
-      return { sessionId: session.id, reused: false };
+      return installationRequestResult(this.config.publicBaseUrl, context, session.id, token, false);
     } catch (error) {
       await this.dataverse.setInstallationSessionStatus(session.id, "failed");
       throw error;
@@ -88,6 +95,40 @@ export class InstallationAutomationService {
     if (new Date(session.expiresAt) <= new Date()) throw new Error("Installation confirmation link has expired.");
     return session;
   }
+}
+
+interface InstallationRequestResult {
+  sessionId: string;
+  reused: boolean;
+  orderId: string;
+  orderName: string;
+  formUrl: string;
+  recipientEmail: string;
+  recipientName: string;
+  subject: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+}
+
+function installationRequestResult(
+  publicBaseUrl: string,
+  context: Awaited<ReturnType<DataverseClient["getInstallationContext"]>>,
+  sessionId: string,
+  token: string,
+  reused: boolean
+): InstallationRequestResult {
+  return {
+    sessionId,
+    reused,
+    orderId: context.orderId,
+    orderName: context.orderName,
+    formUrl: `${publicBaseUrl}/api/installation/${encodeURIComponent(token)}`,
+    recipientEmail: context.recipientEmail,
+    recipientName: context.recipientName,
+    subject: `Confirm your Access4Lofts installation - ${context.orderName}`,
+    scheduledStart: context.scheduledStart,
+    scheduledEnd: context.scheduledEnd
+  };
 }
 
 function escapeHtml(value: string): string {

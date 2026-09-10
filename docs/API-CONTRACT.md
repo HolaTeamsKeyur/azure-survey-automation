@@ -17,6 +17,9 @@ Called by a Dataverse webhook, a small cloud flow, or the demonstration button w
 
 Called when an Order Confirmation has approved installation start/end values.
 
+- Result: `202` after the installation response session is prepared, or `200` when its active token is reused.
+- When `SEND_INSTALLATION_EMAIL=false`, the response includes `orderId`, `orderName`, `formUrl`, `recipientEmail`, `recipientName`, `subject`, `scheduledStart`, and `scheduledEnd` for the Power Automate email action.
+
 - Header `x-automation-key`: required.
 - JSON may be `{ "orderId": "GUID" }` or the standard Dataverse `RemoteExecutionContext` body.
 - Result: `202` after Order Confirmation response metadata is prepared or `200` when its active token is reused.

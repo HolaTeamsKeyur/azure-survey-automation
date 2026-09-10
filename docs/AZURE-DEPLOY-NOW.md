@@ -1,6 +1,6 @@
 # Azure deployment — next required phase
 
-The solution does not work end to end without an Azure deployment. Before deployment, the Dynamics buttons only update Dataverse timestamps. Azure is required to receive the webhook, read regional products, schedule the survey, send the email and host the signed customer forms.
+The solution does not work end to end without an Azure deployment. Before deployment, the Dynamics buttons only update Dataverse timestamps. Azure receives the Power Automate request, reads regional products and hosts the signed customer forms. Power Automate sends the pilot emails.
 
 ## 1. Values required
 
@@ -28,10 +28,7 @@ Obtain these values without placing secrets in chat or source control:
 6. Copy the **Application (client) ID** and **Directory (tenant) ID**.
 7. Open **Certificates & secrets** > **New client secret**.
 8. Use the shortest approved expiry and copy the secret **value** immediately.
-9. Open **API permissions** > **Add a permission** > **Microsoft Graph** > **Application permissions**.
-10. Add `Calendars.ReadBasic` and `Mail.Send`.
-11. Grant admin consent.
-12. Restrict Graph application access to the approved sender/surveyor mailboxes using the organisation's Exchange application-access/RBAC policy.
+9. Do not add or grant Microsoft Graph application permissions for the Power Automate pilot. The app identity is used only for Dataverse client-credential access.
 
 ## 3. Create the Dataverse application user
 
@@ -108,6 +105,10 @@ AZURE_CLIENT_ID=<application GUID>
 AZURE_CLIENT_SECRET=<client secret value>
 SURVEY_TOKEN_SECRET=<32+ random characters>
 AUTOMATION_INGRESS_KEY=<24+ random characters>
+SEND_SURVEY_EMAIL=false
+SEND_INSTALLATION_EMAIL=false
+CREATE_QUOTE_ON_SUBMIT=true
+ENABLE_AUTO_SCHEDULING=false
 ENABLE_ACTIONABLE_MESSAGES=false
 ACTIONABLE_APP_ID_URI=disabled
 ACTIONABLE_ORIGINATOR_ID=disabled
@@ -123,7 +124,7 @@ SURVEY_BUSINESS_END_HOUR=17
 DEFAULT_TIME_ZONE=Europe/London
 ```
 
-Keep Outlook cards and Word attachments disabled for the first deployment. The first milestone is a normal email containing the secure browser form.
+These settings make Power Automate the only email sender, leave Quote creation in Azure, and prevent Graph calendar/email calls. Keep Word attachments disabled for the first deployment.
 
 ## 6. Deploy the prepared application through GitHub
 
@@ -154,7 +155,7 @@ The deployment command publishes:
 - the Node 20 managed Azure Functions API;
 - the survey and installation forms;
 - the Dataverse webhook receivers;
-- Graph scheduling/email code.
+- Power Automate-ready survey and installation email payloads.
 
 ## 7. Smoke test before registering a webhook
 
@@ -162,10 +163,10 @@ The deployment command publishes:
 2. Open `https://<hostname>/api/health`.
 3. Confirm the result contains `status: ok`.
 4. Use an internal test recipient only.
-5. Manually POST one test Opportunity GUID to `/api/events/opportunity-ready` with header `x-automation-key`.
-6. Confirm the email arrives and the signed form opens.
+5. Manually POST one test Opportunity GUID to `/api/events/opportunity-ready` with header `x-automation-key` and confirm the JSON includes `formUrl` and recipient details.
+6. Configure Flow 1 from `POWER-AUTOMATE-SURVEY-FLOWS.md`, run it, and confirm the email arrives and the signed form opens.
 7. Submit a response and confirm Opportunity fields update.
-8. Repeat for one Order.
+8. Configure Flow 3 and repeat for one Order.
 
 ## 8. Only then register the Dataverse webhooks
 
@@ -183,5 +184,5 @@ Use header authentication name `x-automation-key` and the same value stored in A
 After browser-form UAT succeeds:
 
 1. Upload the approved Word template to private Blob Storage and set `ENABLE_WORD_DOCUMENT=true`.
-2. Complete Outlook Actionable Message provider/Entra registration and then set `ENABLE_ACTIONABLE_MESSAGES=true`.
+2. Only if replacing Power Automate's **Send email with options** with a custom card later, complete the Outlook Actionable Message provider/Entra registration and then set `SEND_INSTALLATION_EMAIL=true` and `ENABLE_ACTIONABLE_MESSAGES=true`.
 3. Retest using Outlook Web, new Outlook and supported desktop/mobile clients; the browser link remains the fallback.

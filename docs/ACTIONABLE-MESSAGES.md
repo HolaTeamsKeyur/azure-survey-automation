@@ -2,7 +2,17 @@
 
 ## Selected model
 
-Phase 1 uses Adaptive Card 1.0 with Outlook `Action.Http` only in the installation-confirmation email. It posts to an Azure Function endpoint that validates the Microsoft Entra action token and signed installation token. The survey email contains a normal link to the separate Survey and Quotation Form; it does not contain a survey Adaptive Card.
+The no-admin-consent pilot uses Power Automate's Office 365 Outlook **Send email with options** action for the installation-confirmation email. The survey email contains a normal link to the separate Survey and Quotation Form; it does not contain a survey Adaptive Card.
+
+Set `SEND_SURVEY_EMAIL=false`, `SEND_INSTALLATION_EMAIL=false`, `ENABLE_AUTO_SCHEDULING=false`, and `ENABLE_ACTIONABLE_MESSAGES=false`. Power Automate then owns email delivery and Azure does not call Microsoft Graph.
+
+The Outlook connector sends an actionable email with three choices and waits for the selected option. Always include the Azure installation form URL in the HTML body: unsupported clients use that secure fallback, and customers who need to give a reason can use it.
+
+This Power Automate pilot does not require the app registration's Graph `Mail.Send` or `Calendars.ReadBasic.All` application permissions to be granted. The person who owns the Office 365 Outlook connection must be allowed to send from the chosen mailbox.
+
+## Later custom-card option
+
+The code still supports a custom Adaptive Card 1.0 with Outlook `Action.Http`. Use it only later, after the required Entra and Actionable Email Developer Dashboard approvals are available.
 
 Do not use `Action.Submit`; it is not supported by the classic Outlook Actionable Message model. Do not silently switch to Adaptive Card 1.4 `Action.Execute`: that requires the Universal Actions/Azure Bot design and separate testing.
 

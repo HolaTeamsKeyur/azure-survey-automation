@@ -16,7 +16,15 @@ test("loads a safe browser-link-only configuration", () => {
   const config = loadConfig(valid);
   assert.equal(config.enableActionableMessages, false);
   assert.equal(config.enableWordDocument, false);
+  assert.equal(config.sendInstallationEmail, true);
   assert.equal(config.dataverseUrl, valid.DATAVERSE_URL);
+});
+
+test("disables both Graph email writers for the Power Automate pilot", () => {
+  const config = loadConfig({ ...valid, SEND_SURVEY_EMAIL: "false", SEND_INSTALLATION_EMAIL: "false", ENABLE_AUTO_SCHEDULING: "false" });
+  assert.equal(config.sendSurveyEmail, false);
+  assert.equal(config.sendInstallationEmail, false);
+  assert.equal(config.enableAutoScheduling, false);
 });
 
 test("fails fast when optional features lack required dependencies", () => {
