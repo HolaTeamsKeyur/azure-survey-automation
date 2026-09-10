@@ -19,11 +19,35 @@ export function webhookFailure(error: unknown, id: string): HttpResponseInit {
     : status === 400
       ? "The webhook payload is invalid."
       : "Automation processing temporarily failed.";
+  const diagnostic = status === 503 ? processingDiagnostic(error) : undefined;
   return {
     status,
     headers: { "Cache-Control": "no-store", "x-correlation-id": id },
-    jsonBody: { error: message, correlationId: id }
+    jsonBody: { error: message, ...(diagnostic ? { diagnostic } : {}), correlationId: id }
   };
+}
+
+function processingDiagnostic(error: unknown): string | undefined {
+  if (!(error instanceof Error)) return undefined;
+  const message = error.message;
+  if (/^Opportunity requires |^The Opportunity |^Order Confirmation requires |^The Opportunity Price List /.test(message)) {
+    return message.slice(0, 500);
+  }
+  const dataverse = /^Dataverse (GET|POST|PATCH) .* failed \((\d{3})\): ([\s\S]+)$/.exec(message);
+  if (dataverse) {
+    let detail = "";
+    try {
+      const parsed = JSON.parse(dataverse[3]) as { error?: { message?: unknown } };
+      detail = typeof parsed.error?.message === "string" ? parsed.error.message : "";
+    } catch {
+      detail = "";
+    }
+    return `Dataverse request failed (${dataverse[2]})${detail ? `: ${detail.slice(0, 400)}` : ""}`;
+  }
+  if (/credential|authentication|AADSTS|access token/i.test(message)) {
+    return "Dataverse authentication failed. Check the Azure client secret and Dataverse application user.";
+  }
+  return undefined;
 }
 
 export function publicActionFailure(id: string, cardStatus: string): HttpResponseInit {

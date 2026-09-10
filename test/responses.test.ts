@@ -13,6 +13,13 @@ test("webhook failures distinguish authentication, bad payload and retryable pro
   assert.doesNotMatch(JSON.stringify(webhookFailure(new Error("Dataverse returned sensitive details"), correlation).jsonBody), /sensitive details/);
 });
 
+test("webhook failures expose only recognised safe Dataverse diagnostics", () => {
+  const missingContact = webhookFailure(new Error("Opportunity requires a Contact with an email address."), correlation);
+  assert.match(JSON.stringify(missingContact.jsonBody), /requires a Contact/);
+  const permission = webhookFailure(new Error('Dataverse GET opportunities(id) failed (403): {"error":{"message":"The application user lacks read access."}}'), correlation);
+  assert.match(JSON.stringify(permission.jsonBody), /Dataverse request failed \(403\).*lacks read access/);
+});
+
 test("public response errors are redacted and carry a correlation ID", () => {
   const failure = publicActionFailure(correlation, "Use the browser form.");
   assert.equal(failure.status, 400);
