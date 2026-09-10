@@ -101,7 +101,7 @@ export class DataverseClient {
     const result = await this.request<{ value: Array<Record<string, unknown>> }>(
       `productpricelevels?$select=productpricelevelid,amount,_productid_value,_uomid_value,ht_surveydisplayorder,ht_surveycustomerdescription,ht_surveypricedisplaytext,ht_surveypriceisindicative&` +
       `$expand=productid($select=productid,name,description),uomid($select=uomid,name)&` +
-      `$filter=_pricelevelid_value eq ${id} and statecode eq 0 and ht_showincustomersurvey eq true&` +
+      `$filter=_pricelevelid_value eq ${id} and ht_showincustomersurvey eq true&` +
       `$orderby=ht_surveydisplayorder asc`
     );
     return result.value.map((row, index) => {
