@@ -46,22 +46,9 @@ export class SurveyAutomationService {
     }
     const products = await this.dataverse.getRegionProducts(context.priceListId);
     if (!products.length) throw new Error("The Opportunity Price List has no products.");
-    const surveyorMailbox = context.region.surveyorMailbox;
-    if (!surveyorMailbox) throw new Error("The Opportunity requires a Surveyor with an internal email address.");
-
-    const searchStart = new Date(Date.now() + 24 * 60 * 60_000);
-    const searchEnd = new Date(searchStart.getTime() + 21 * 86_400_000);
-    const busy = await this.graph.getBusyPeriods(
-      surveyorMailbox,
-      searchStart.toISOString(),
-      searchEnd.toISOString(),
-      this.config.DEFAULT_TIME_ZONE
-    );
-    const slot = findFirstAvailableSlot(searchStart, this.config.DEFAULT_SURVEY_DURATION_MINUTES, {
-      startHour: this.config.SURVEY_BUSINESS_START_HOUR,
-      endHour: this.config.SURVEY_BUSINESS_END_HOUR,
-      workingDays: [1, 2, 3, 4, 5]
-    }, busy, this.config.DEFAULT_TIME_ZONE);
+    const slot = this.config.enableAutoScheduling
+      ? await this.findSurveySlot(context)
+      : pilotSurveySlot(context, this.config.DEFAULT_SURVEY_DURATION_MINUTES);
 
     const tokenId = randomUUID();
     const selected = products.filter(product => product.selectedByDefault).map(product => product.productId);
@@ -81,12 +68,14 @@ export class SurveyAutomationService {
     });
 
     try {
-      const appointmentId = await this.dataverse.createSurveyAppointment(
-        context,
-        session.scheduledStart,
-        session.scheduledEnd
-      );
-      await this.dataverse.updateSession(session.id, { ht_surveyeventid: appointmentId });
+      if (this.config.enableAutoScheduling) {
+        const appointmentId = await this.dataverse.createSurveyAppointment(
+          context,
+          session.scheduledStart,
+          session.scheduledEnd
+        );
+        await this.dataverse.updateSession(session.id, { ht_surveyeventid: appointmentId });
+      }
 
       const claims: SurveyTokenClaims = {
         sessionId: session.id,
@@ -132,6 +121,24 @@ export class SurveyAutomationService {
       });
       throw error;
     }
+  }
+
+  private async findSurveySlot(context: OpportunityContext): Promise<{ start: Date; end: Date }> {
+    const surveyorMailbox = context.region.surveyorMailbox;
+    if (!surveyorMailbox) throw new Error("The Opportunity requires a Surveyor with an internal email address.");
+    const searchStart = new Date(Date.now() + 24 * 60 * 60_000);
+    const searchEnd = new Date(searchStart.getTime() + 21 * 86_400_000);
+    const busy = await this.graph.getBusyPeriods(
+      surveyorMailbox,
+      searchStart.toISOString(),
+      searchEnd.toISOString(),
+      this.config.DEFAULT_TIME_ZONE
+    );
+    return findFirstAvailableSlot(searchStart, this.config.DEFAULT_SURVEY_DURATION_MINUTES, {
+      startHour: this.config.SURVEY_BUSINESS_START_HOUR,
+      endHour: this.config.SURVEY_BUSINESS_END_HOUR,
+      workingDays: [1, 2, 3, 4, 5]
+    }, busy, this.config.DEFAULT_TIME_ZONE);
   }
 
   async submitSurvey(
@@ -220,6 +227,16 @@ function surveyRequestResult(
     recipientName: context.customer.name,
     subject: `Your Access4Lofts survey - ${context.name}`
   };
+}
+
+function pilotSurveySlot(context: OpportunityContext, durationMinutes: number): { start: Date; end: Date } {
+  const start = context.scheduledStart ? new Date(context.scheduledStart) : new Date(Date.now() + 24 * 60 * 60_000);
+  if (Number.isNaN(start.getTime())) throw new Error("Opportunity Survey Start is invalid.");
+  const configuredEnd = context.scheduledEnd ? new Date(context.scheduledEnd) : undefined;
+  const end = configuredEnd && !Number.isNaN(configuredEnd.getTime()) && configuredEnd > start
+    ? configuredEnd
+    : new Date(start.getTime() + durationMinutes * 60_000);
+  return { start, end };
 }
 
 function surveyDetailsPatch(details: SurveySubmission["details"]): Record<string, unknown> {

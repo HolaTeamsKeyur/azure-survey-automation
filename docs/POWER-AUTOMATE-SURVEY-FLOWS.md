@@ -5,6 +5,7 @@ Use one authoritative writer for email and one authoritative writer for Quote cr
 ## Pilot settings
 
 - Set Azure `SEND_SURVEY_EMAIL=false` when Flow 1 sends the email.
+- Set Azure `ENABLE_AUTO_SCHEDULING=false` to avoid Graph/calendar permissions for the link-only pilot. Existing Opportunity survey dates are used when present.
 - Keep Azure `CREATE_QUOTE_ON_SUBMIT=true` for the fastest pilot; Flow 2 is then unnecessary.
 - If Flow 2 must create the Quote, set Azure `CREATE_QUOTE_ON_SUBMIT=false` before enabling Flow 2.
 - Regional pilot Price List: `Access4Lofts Brighton - GBP Survey`.
@@ -102,10 +103,9 @@ The Azure submit handler applies the resolved regional Price List and its curren
 
 1. Create/qualify an Enquiry and set Region to `Brighton`.
 2. On the Opportunity verify Franchise Account is `Access4Lofts Brighton`.
-3. Select a Surveyor with an internal email address.
+3. Optionally set Survey Start/Finish. A Surveyor is required only when `ENABLE_AUTO_SCHEDULING=true`.
 4. Select **Send Customer Survey**.
 5. Confirm Flow 1 sends exactly one email and the link opens the hosted form.
 6. Enter quantities for two products and submit.
 7. In the Opportunity open the **Products** tab and verify exactly two Opportunity Products.
 8. Open the **Quotes** tab and verify one draft Quote containing exactly two Quote Products with the Brighton GBP Price List.
-

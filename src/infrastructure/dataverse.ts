@@ -41,7 +41,7 @@ export class DataverseClient {
   async getOpportunityContext(opportunityId: string): Promise<OpportunityContext> {
     const id = normalizeGuid(opportunityId);
     const row = await this.request<Record<string, unknown>>(
-      `opportunities(${id})?$select=opportunityid,name,ht_propertypostcode,ht_streetname,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_ht_surveyor_value&` +
+      `opportunities(${id})?$select=opportunityid,name,ht_propertypostcode,ht_streetname,ht_surveystart,ht_surveyfinish,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_ht_surveyor_value&` +
       `$expand=parentcontactid($select=contactid,fullname,emailaddress1,mobilephone),ht_Region($select=ht_regionid,ht_name,ht_regioncode,ht_email,ht_telephone,_ht_franchise_value)`
     );
     const contact = row.parentcontactid as Record<string, unknown> | undefined;
@@ -73,6 +73,8 @@ export class DataverseClient {
       streetName: stringOrUndefined(row.ht_streetname),
       priceListId,
       surveyorUserId,
+      scheduledStart: stringOrUndefined(row.ht_surveystart),
+      scheduledEnd: stringOrUndefined(row.ht_surveyfinish),
       customer: {
         contactId: String(contact.contactid),
         name: String(contact.fullname ?? "Customer"),

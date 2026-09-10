@@ -47,6 +47,8 @@ export interface OpportunityContext {
   streetName?: string;
   priceListId?: string;
   surveyorUserId?: string;
+  scheduledStart?: string;
+  scheduledEnd?: string;
 }
 
 export interface ProductOption {
