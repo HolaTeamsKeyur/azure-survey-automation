@@ -5,17 +5,6 @@
       "allowedRoles": ["anonymous"]
     }
   ],
-  "auth": {
-    "identityProviders": {
-      "azureActiveDirectory": {
-        "registration": {
-          "openIdIssuer": "https://login.microsoftonline.com/ad358c33-6236-4cda-92e7-47b5c2b8c13e/v2.0",
-          "clientIdSettingName": "SURVEY_AUTH_CLIENT_ID",
-          "clientSecretSettingName": "SURVEY_AUTH_CLIENT_SECRET"
-        }
-      }
-    }
-  },
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",

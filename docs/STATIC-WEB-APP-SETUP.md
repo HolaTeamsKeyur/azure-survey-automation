@@ -1,6 +1,6 @@
-# Legacy Azure Static Web Apps Free demo setup
+# Azure Static Web Apps Free setup
 
-This Free-plan procedure is superseded for production. The surveyor workflow uses Standard with a custom, single-tenant Entra provider; follow `PRODUCTION-SURVEY-RUNBOOK.md`.
+The current surveyor workflow stays on Free and uses the preconfigured Entra provider plus API-level tenant and assigned-email enforcement. Follow `PRODUCTION-SURVEY-RUNBOOK.md` for the current security and Dataverse workflow.
 
 This is the selected no-additional-Dynamics-module host for the demonstration. GitHub Actions is the preferred deployment route; the local deployment-token command is a fallback.
 
@@ -60,14 +60,9 @@ This sends a normal branded HTML email with the secure public link. It avoids bl
 
 ## Application identity
 
-Create one single-tenant Entra application and one Dataverse application user with the custom role described in `DATAVERSE-MANUAL-BUILD.md`.
+Keep the existing single-tenant backend Entra application and Dataverse Application User with the custom role described in the production runbook. It needs no Microsoft Graph permissions while Power Automate sends mail and automatic scheduling is disabled.
 
-Microsoft Graph application permissions:
-
-- `Calendars.ReadBasic`
-- `Mail.Send`
-
-Grant admin consent and restrict the app to approved mailboxes through Exchange application RBAC/access policy.
+Surveyor browser authentication uses the Static Web Apps preconfigured `/.auth/login/aad` provider. The API checks the resulting tenant claim and assigned surveyor email; do not disable `REQUIRE_SURVEYOR_AUTH` in Azure.
 
 For the Free managed API, `DefaultAzureCredential` reads `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET`. Rotate the secret after the demo. Production should use a hosting option with managed identity or certificate authentication.
 

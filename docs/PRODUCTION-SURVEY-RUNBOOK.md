@@ -23,20 +23,13 @@ Power Automate sends mail through its Office 365 Outlook connection. Dataverse A
 
 Rotate the previously used client secret before production and store only the new value in Azure configuration/Key Vault. Never put it in Power Automate, source control, chat, screenshots, or documentation.
 
-### Surveyor interactive sign-in
+### Surveyor interactive sign-in on the Free plan
 
-Use a separate app registration so interactive users and the Dataverse service never share an identity:
+Keep `a4l-survey-dev` on Azure Static Web Apps Free and use its preconfigured Microsoft Entra provider. No second app registration or surveyor-portal client secret is required.
 
-1. Entra admin centre > **App registrations > New registration**.
-2. Name: `A4L Surveyor Portal`.
-3. Supported account type: **Accounts in this organisational directory only**.
-4. Add Web redirect URI: `https://kind-sea-0609d7210.3.azurestaticapps.net/.auth/login/aad/callback`.
-5. No Graph application permission is required. OpenID sign-in is sufficient.
-6. Create a client credential, record it once, and store it as an Azure app setting. Prefer a Key Vault-backed secret and an agreed rotation owner/date.
-7. Upgrade `a4l-survey-dev` to Static Web Apps **Standard** before configuring the custom Entra provider. The checked-in infrastructure now declares Standard for new deployments.
-8. In **Static Web App > Configuration**, add `SURVEY_AUTH_CLIENT_ID` and `SURVEY_AUTH_CLIENT_SECRET`. The checked-in `web/staticwebapp.config.json` already points the custom provider at these settings and restricts the issuer to the HolaTeams tenant.
+The email link first opens `/.auth/login/aad` and returns to the signed survey URL. Although the Free provider can display sign-in for Microsoft accounts outside HolaTeams, the API independently validates all three controls: a signed survey token, the HolaTeams Entra tenant ID from `AZURE_TENANT_ID`, and the signed-in email matching the Opportunity's assigned Surveyor internal email. An outside account, another employee, or a forwarded link is rejected.
 
-The API validates all three controls: a signed survey token, the Entra tenant ID, and the signed-in email matching the Opportunity's assigned Surveyor internal email. A forwarded link therefore cannot be used by another employee.
+This keeps hosting free during development and UAT. A separate single-tenant custom provider remains an optional Standard-plan hardening step before a future production SLA decision; it is not required for the current build.
 
 ## 2. Dataverse application-user role
 
