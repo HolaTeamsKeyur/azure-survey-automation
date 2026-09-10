@@ -125,6 +125,30 @@ export class DataverseClient {
     });
   }
 
+  async applyOpportunityPriceList(opportunityId: string, priceListId: string): Promise<void> {
+    const opportunity = normalizeGuid(opportunityId);
+    const priceList = normalizeGuid(priceListId);
+    const [opportunityRow, priceListRow] = await Promise.all([
+      this.request<Record<string, unknown>>(
+        `opportunities(${opportunity})?$select=_pricelevelid_value,_transactioncurrencyid_value`
+      ),
+      this.request<Record<string, unknown>>(
+        `pricelevels(${priceList})?$select=_transactioncurrencyid_value`
+      )
+    ]);
+    const currencyId = stringOrUndefined(priceListRow._transactioncurrencyid_value);
+    const patch: Record<string, unknown> = {};
+    if (String(opportunityRow._pricelevelid_value ?? "").toLowerCase() !== priceList) {
+      patch["pricelevelid@odata.bind"] = `/pricelevels(${priceList})`;
+    }
+    if (currencyId && String(opportunityRow._transactioncurrencyid_value ?? "").toLowerCase() !== currencyId.toLowerCase()) {
+      patch["transactioncurrencyid@odata.bind"] = `/transactioncurrencies(${normalizeGuid(currencyId)})`;
+    }
+    if (Object.keys(patch).length) {
+      await this.request(`opportunities(${opportunity})`, { method: "PATCH", body: JSON.stringify(patch) });
+    }
+  }
+
   async upsertOpportunityProducts(opportunityId: string, selections: readonly SurveyProductSelectionSnapshot[]): Promise<void> {
     const opportunity = normalizeGuid(opportunityId);
     const existing = await this.request<{ value: Array<Record<string, unknown>> }>(
@@ -154,6 +178,39 @@ export class DataverseClient {
         });
       }
     }
+  }
+
+  async generateQuoteFromOpportunity(opportunityId: string): Promise<{ quoteId: string; reused: boolean }> {
+    const opportunity = normalizeGuid(opportunityId);
+    const existing = await this.request<{ value: Array<Record<string, unknown>> }>(
+      `quotes?$select=quoteid,createdon&$filter=_opportunityid_value eq ${opportunity}&$orderby=createdon desc&$top=1`
+    );
+    const existingId = stringOrUndefined(existing.value[0]?.quoteid);
+    if (existingId) return { quoteId: normalizeGuid(existingId), reused: true };
+
+    const generated = await this.request<Record<string, unknown>>("GenerateQuoteFromOpportunity", {
+      method: "POST",
+      body: JSON.stringify({
+        OpportunityId: opportunity,
+        ColumnSet: {
+          AllColumns: false,
+          Columns: ["quoteid", "name", "opportunityid", "customerid", "pricelevelid"]
+        }
+      })
+    });
+    const containers = [generated, generated.Entity, generated.entity, generated.Quote]
+      .filter((value): value is Record<string, unknown> => Boolean(value) && typeof value === "object") as Array<Record<string, unknown>>;
+    for (const container of containers) {
+      const quoteId = stringOrUndefined(container.quoteid) ?? stringOrUndefined(container.QuoteId);
+      if (quoteId) return { quoteId: normalizeGuid(quoteId), reused: false };
+    }
+
+    const created = await this.request<{ value: Array<Record<string, unknown>> }>(
+      `quotes?$select=quoteid,createdon&$filter=_opportunityid_value eq ${opportunity}&$orderby=createdon desc&$top=1`
+    );
+    const quoteId = stringOrUndefined(created.value[0]?.quoteid);
+    if (!quoteId) throw new Error("Dataverse did not return the generated Quote.");
+    return { quoteId: normalizeGuid(quoteId), reused: false };
   }
 
   async findOpenSession(opportunityId: string): Promise<SurveySession | undefined> {

@@ -74,8 +74,9 @@ export function renderSurveyForm(model: SurveyFormViewModel): string {
     </form>`);
 }
 
-export function renderSurveyThanks(productCount: number): string {
-  return page("Survey saved", `<main class="confirmation"><div class="brand-small">${logo()}</div><h1>Survey saved</h1><p>The survey information and ${productCount} product line${productCount === 1 ? "" : "s"} have been added to the opportunity.</p></main>`);
+export function renderSurveyThanks(productCount: number, quoteId?: string): string {
+  const quoteMessage = quoteId ? " A draft quote has also been created for the Access4Lofts team to review." : "";
+  return page("Survey saved", `<main class="confirmation"><div class="brand-small">${logo()}</div><h1>Survey saved</h1><p>The survey information and ${productCount} product line${productCount === 1 ? "" : "s"} have been added to the opportunity.${quoteMessage}</p></main>`);
 }
 
 export function surveyPageHeaders(requestId: string): Record<string, string> {

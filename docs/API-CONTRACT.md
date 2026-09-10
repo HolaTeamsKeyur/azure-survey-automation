@@ -10,7 +10,7 @@ Called by a Dataverse webhook, a small cloud flow, or the demonstration button w
 
 - Header `x-automation-key`: required. Static Web Apps exposes the managed function anonymously, then the function validates this shared ingress secret.
 - JSON may be `{ "opportunityId": "GUID" }` or the standard Dataverse `RemoteExecutionContext` body. In the latter case `PrimaryEntityId` is used.
-- Result: `202` after Opportunity survey metadata is prepared or `200` when its active token is reused.
+- Result: `202` after Opportunity survey metadata is prepared or `200` when its active token is reused. The JSON response includes `formUrl`, `recipientEmail`, `recipientName`, and `subject` so Power Automate can send the email when `SEND_SURVEY_EMAIL=false`.
 - Invalid authentication returns `401`; malformed payload returns `400`; temporary processing failure returns `503` so Dataverse can make its single supported webhook retry. Responses include `x-correlation-id`.
 
 ### `POST /events/installation-ready`
@@ -32,7 +32,7 @@ Used only by the installation-confirmation email. The endpoint validates the Out
 
 ### `GET|POST /survey/{signed-token}`
 
-Displays and processes the record-specific Customer Enquiry / Survey and Quotation Form. Enquiry values are loaded from the related Opportunity and Contact. Product rows come from the immutable regional Price List snapshot. Submitted quantities create or update standard Opportunity Product rows.
+Displays and processes the record-specific Customer Enquiry / Survey and Quotation Form. Enquiry values are loaded from the related Opportunity and Contact. Product rows come from the immutable regional Price List snapshot. Submitted quantities create or update standard Opportunity Product rows. When `CREATE_QUOTE_ON_SUBMIT=true`, the handler then idempotently calls Dynamics `GenerateQuoteFromOpportunity` to create the draft Quote and Quote Products.
 
 ### `GET|POST /installation/{signed-token}`
 

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { AppConfig } from "../config.js";
-import type { ProductOption, SurveySubmission } from "../domain/models.js";
+import type { OpportunityContext, ProductOption, SurveySubmission } from "../domain/models.js";
 import { assertTransition, splitProductIds, validateProductSelections, validateSurveySubmission } from "../domain/rules.js";
 import { findFirstAvailableSlot } from "../domain/scheduling.js";
 import { DataverseClient } from "../infrastructure/dataverse.js";
@@ -22,11 +22,23 @@ export class SurveyAutomationService {
       : undefined);
   }
 
-  async requestSurvey(opportunityId: string): Promise<{ sessionId: string; reused: boolean }> {
+  async requestSurvey(opportunityId: string): Promise<{
+    sessionId: string;
+    reused: boolean;
+    formUrl: string;
+    recipientEmail: string;
+    recipientName: string;
+    subject: string;
+  }> {
     const context = await this.dataverse.getOpportunityContext(opportunityId);
     const existing = await this.dataverse.findOpenSession(context.opportunityId);
     if (existing && !["expired", "declined", "failed"].includes(existing.status)) {
-      return { sessionId: existing.id, reused: true };
+      const token = await issueSurveyToken(this.config, {
+        sessionId: existing.id,
+        tokenId: existing.tokenId,
+        recipientHash: hashEmail(existing.recipientEmail)
+      });
+      return surveyRequestResult(this.config.publicBaseUrl, context, existing.id, token, true);
     }
 
     if (!context.priceListId) {
@@ -100,17 +112,19 @@ export class SurveyAutomationService {
         });
       }
       const fallback = `<p>Hello ${escapeHtml(context.customer.name)},</p><p>Your survey is proposed for ${escapeHtml(session.scheduledStart)}.</p><p><a href="${escapeHtml(formUrl)}">Open the secure survey form</a></p>`;
-      await this.graph.sendActionableMail(
-        context.region.senderMailbox || this.config.GRAPH_SENDER_MAILBOX,
-        context.customer.email,
-        `Your Access4Lofts survey - ${context.name}`,
-        fallback,
-        undefined,
-        attachments
-      );
+      if (this.config.sendSurveyEmail) {
+        await this.graph.sendActionableMail(
+          context.region.senderMailbox || this.config.GRAPH_SENDER_MAILBOX,
+          context.customer.email,
+          `Your Access4Lofts survey - ${context.name}`,
+          fallback,
+          undefined,
+          attachments
+        );
+      }
       assertTransition("draft", "sent");
       await this.dataverse.setSessionStatus(session.id, "sent");
-      return { sessionId: session.id, reused: false };
+      return surveyRequestResult(this.config.publicBaseUrl, context, session.id, token, false);
     } catch (error) {
       await this.dataverse.updateSession(session.id, {
         ht_surveyautomationstatuskey: "failed",
@@ -123,7 +137,7 @@ export class SurveyAutomationService {
   async submitSurvey(
     input: SurveySubmission,
     tokenClaims: SurveyTokenClaims
-  ): Promise<{ status: string; productCount: number }> {
+  ): Promise<{ status: string; productCount: number; quoteId?: string }> {
     const submission = validateSurveySubmission(input);
     const session = await this.dataverse.getSession(submission.sessionId);
     if (session.tokenId !== tokenClaims.tokenId || hashEmail(session.recipientEmail) !== tokenClaims.recipientHash) {
@@ -155,7 +169,13 @@ export class SurveyAutomationService {
       quantity: session.productsSnapshot.find(product => product.productId.toLowerCase() === productId.toLowerCase())?.quantity ?? 1
     }));
     const selected = validateProductSelections(requested, session.productsSnapshot);
+    const context = await this.dataverse.getOpportunityContext(session.opportunityId);
+    if (!context.priceListId) throw new Error("The Opportunity has no regional Price List.");
+    await this.dataverse.applyOpportunityPriceList(session.opportunityId, context.priceListId);
     await this.dataverse.upsertOpportunityProducts(session.opportunityId, selected);
+    const quote = this.config.createQuoteOnSubmit
+      ? await this.dataverse.generateQuoteFromOpportunity(session.opportunityId)
+      : undefined;
     await this.dataverse.updateSession(session.id, {
       ...commonPatch,
       ...surveyDetailsPatch(submission.details),
@@ -163,7 +183,7 @@ export class SurveyAutomationService {
       ht_surveyselectionsnapshotjson: JSON.stringify(selected),
       ht_surveyproductreviewstatuskey: "applied"
     }, session.version);
-    return { status: "accepted", productCount: selected.length };
+    return { status: "accepted", productCount: selected.length, quoteId: quote?.quoteId };
   }
 
   async getSurveyForm(tokenClaims: SurveyTokenClaims): Promise<{
@@ -183,6 +203,23 @@ export class SurveyAutomationService {
   parseProductSelection(value: string | undefined): string[] {
     return splitProductIds(value);
   }
+}
+
+function surveyRequestResult(
+  publicBaseUrl: string,
+  context: OpportunityContext,
+  sessionId: string,
+  token: string,
+  reused: boolean
+) {
+  return {
+    sessionId,
+    reused,
+    formUrl: `${publicBaseUrl}/api/survey/${encodeURIComponent(token)}`,
+    recipientEmail: context.customer.email,
+    recipientName: context.customer.name,
+    subject: `Your Access4Lofts survey - ${context.name}`
+  };
 }
 
 function surveyDetailsPatch(details: SurveySubmission["details"]): Record<string, unknown> {

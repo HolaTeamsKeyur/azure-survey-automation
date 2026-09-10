@@ -33,7 +33,7 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
         ladderClearanceWidthCm: numberOptional(form.get("ladderClearanceWidthCm")), ladderArcClearanceCm: numberOptional(form.get("ladderArcClearanceCm")), ladderArcType: optional(form.get("ladderArcType")), planNotes: optional(form.get("planNotes")), additionalInfo: optional(form.get("additionalInfo"))
       }
     }, claims);
-    return { status: 200, headers: surveyPageHeaders(requestId), body: renderSurveyThanks(result.productCount) };
+    return { status: 200, headers: surveyPageHeaders(requestId), body: renderSurveyThanks(result.productCount, result.quoteId) };
   } catch (error) {
     context.error(`Survey form request failed. Correlation ID: ${requestId}`, error);
     return { status: 400, headers: surveyPageHeaders(requestId), body: errorPage(publicFormErrorMessage()) };

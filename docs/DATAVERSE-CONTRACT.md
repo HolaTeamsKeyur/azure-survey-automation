@@ -109,7 +109,7 @@ For this demonstration, time zone, duration and business hours are Azure applica
 
 - The email/form reads products and prices from the Opportunity Price List. If absent, it uses Region -> Franchise Account -> Default Price List.
 - VAT is not displayed or calculated until Finance approves the authoritative rule.
-- The response is saved on Opportunity; no Quote is created in this phase.
+- The response is saved on Opportunity. By default Azure creates one draft Quote from the selected Opportunity Products; this can be delegated to Power Automate with `CREATE_QUOTE_ON_SUBMIT=false`.
 - The installation response is saved on Order Confirmation; no Task or additional record is created.
 - Product and response snapshots prevent browser tampering and preserve what the customer saw.
 
