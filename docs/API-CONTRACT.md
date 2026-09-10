@@ -35,7 +35,7 @@ Used only by the installation-confirmation email. The endpoint validates the Out
 
 ### `GET|POST /survey/{signed-token}`
 
-Displays and processes the record-specific Customer Enquiry / Survey and Quotation Form. Enquiry values are loaded from the related Opportunity and Contact. Product rows come from the immutable regional Price List snapshot. Submitted quantities create or update standard Opportunity Product rows. When `CREATE_QUOTE_ON_SUBMIT=true`, the handler then idempotently calls Dynamics `GenerateQuoteFromOpportunity` to create the draft Quote and Quote Products.
+Displays and processes the record-specific internal Property Survey. Values are loaded from the related Opportunity and Contact. The signed-in Entra user must be in the configured tenant and their email must match the assigned Surveyor's internal email. Product rows come from the immutable regional Price List snapshot. Submitted catalogue quantities create or update standard Opportunity Product rows. Non-catalogue entries create governed Survey Product Request rows and block Quote generation until approval; otherwise `CREATE_QUOTE_ON_SUBMIT=true` creates the draft Quote and Quote Products.
 
 ### `GET|POST /installation/{signed-token}`
 

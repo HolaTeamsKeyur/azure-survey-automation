@@ -40,3 +40,22 @@ Order Confirmation,Installation Response Expires At,ht_InstallationResponseExpir
 Order Confirmation,Installation Response Token ID,ht_InstallationResponseTokenId,Text 100,Yes,Hidden
 Order Confirmation,Installation Response Reason,ht_InstallationResponseReason,Multiline 4000,Yes,Read-only
 Order Confirmation,Installation Responded On,ht_InstallationRespondedOn,DateTime UserLocal,Yes,Read-only
+Survey Product Request,Name,ht_Name,Text 200,Production,Request form
+Survey Product Request,Source Key,ht_SourceKey,Text 450 alternate key,Production,Hidden
+Survey Product Request,Opportunity,ht_Opportunity,Lookup Opportunity required,Production,Read-only
+Survey Product Request,Surveyor,ht_Surveyor,Lookup User required,Production,Read-only
+Survey Product Request,Description,ht_Description,Multiline 2000,Production,Review form
+Survey Product Request,Quantity,ht_Quantity,Decimal precision 3 min 0.001,Production,Review form
+Survey Product Request,Unit,ht_UnitName,Text 100,Production,Review form
+Survey Product Request,Estimated Unit Price,ht_EstimatedUnitPrice,Currency,Production,Review form
+Survey Product Request,Justification,ht_Justification,Multiline 1000,Production,Review form
+Survey Product Request,Status Key,ht_StatusKey,Text 50 required default pending,Production,Review form
+Survey Product Request,Approved Product,ht_ApprovedProduct,Lookup Product,Production,Review form
+Survey Product Request,Approved Unit,ht_ApprovedUnit,Lookup Unit,Production,Review form
+Survey Product Request,Approved Unit Price,ht_ApprovedUnitPrice,Currency,Production,Review form
+Survey Product Request,Review Comments,ht_ReviewComments,Multiline 2000,Production,Review form
+Survey Template,Name,ht_Name,Text 200,Production,Configuration form
+Survey Template,Region,ht_Region,Lookup Region optional,Production,Configuration form
+Survey Template,Definition JSON,ht_DefinitionJson,Multiline 100000 required,Production,Configuration form
+Survey Template,Version,ht_Version,Whole Number min 1 default 1,Production,Configuration form
+Survey Template,Is Default,ht_IsDefault,Yes No default No,Production,Configuration form

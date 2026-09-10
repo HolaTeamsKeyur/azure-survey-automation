@@ -1,85 +1,61 @@
-# HolaTeams survey and installation-response demonstration
+# Access4Lofts survey automation
 
-## Test the complete flow locally
+Production-oriented Dynamics 365 / Dataverse property survey workflow.
 
-Microsoft identity access is not required for the safe mock demo:
+## Current workflow
 
-```powershell
-npm ci
-npm run check
-npm run demo:local
-```
+1. A Lead is qualified to an Opportunity.
+2. Sales sets Contact, Region, Surveyor, survey date/time and the resolved regional Price List.
+3. Power Automate calls the Azure ingress endpoint and emails the returned link to the assigned Surveyor.
+4. The Surveyor signs in with Microsoft Entra ID. The API requires the configured tenant and an email match to the assigned Dynamics System User.
+5. The form preloads the Opportunity and Contact, captures on-site details and displays the immutable regional Price List snapshot.
+6. Catalogue selections are validated and upserted as Opportunity Products.
+7. A non-catalogue item becomes a Survey Product Request for office approval; a Quote is deliberately withheld until all requests are resolved.
+8. With no pending request, Dynamics creates one draft Quote from the Opportunity.
+9. The later installation-confirmation email is a separate customer-facing process.
 
-Then open `http://127.0.0.1:4280`. See [the local demo guide](docs/LOCAL-DEMO.md) for the test sequence.
+## Security boundaries
 
-Public survey/confirmation form and email automation using existing Dataverse tables. It does not require Customer Insights/Journeys, Power Pages or any new Dataverse table.
+- Surveyor: interactive, single-tenant Entra sign-in.
+- Backend: Dataverse Application User/service principal; no Graph permission when Power Automate sends mail.
+- Power Automate: Office 365 Outlook connector sends survey and installation messages.
+- Survey link: signed, expiring token plus tenant and assigned-email checks.
+- Automation ingress: separate rotating header secret.
+- Submitted product IDs: restricted to the immutable session snapshot.
 
-## Demonstration scope
+`Calendars.ReadBasic.All` and `Mail.Send` are not required for the current backend. Calendar access is reserved for a future, explicitly approved free/busy feature.
 
-1. Opportunity triggers automatic survey scheduling.
-2. The service reads Contact, Region, Surveyor and the applicable standard Price List.
-3. It saves the schedule, secure-token metadata and product snapshot on Opportunity.
-4. A Dataverse webhook can start the process without a premium Power Automate HTTP action. The service creates a standard Dataverse Appointment and sends an email containing the signed Survey and Quotation Form link. Outlook Actionable Messages are used only for the separate installation-confirmation email.
-5. The customer accepts, declines or requests another time, selects products and submits feedback.
-6. The response is saved directly on Opportunity.
-7. Order Confirmation uses the same pattern for installation accept/decline/reschedule; its response is saved directly on the Order.
-
-Automatic Quote creation is intentionally disabled for this demonstration.
-
-## Hosting recommendation
-
-Use Azure Static Web Apps Free with managed HTTP API functions for the demonstration. It supplies public HTTPS hosting without an extra Dynamics module. Free tier has no SLA and is not a production commitment.
-
-SPFx is not selected because a SharePoint page/web part is an authenticated SharePoint experience; SharePoint Anyone links do not turn an SPFx page into a general anonymous public application.
-
-## Current status
-
-- TypeScript form/API/email/scheduling code: implemented locally and build-tested.
-- Existing-table Dataverse contract: prepared.
-- Architecture, security, test and deployment documentation: prepared.
-- Local verification: run `npm.cmd run check`; 24 tests currently cover configuration dependencies, scheduling, transitions, input validation, safe error handling, card content, dynamic Word rendering and Dataverse webhook payload parsing.
-- Azure/Dataverse deployment: not performed.
-- Technical Word baseline: generated and render-tested; final branding/copy, pricing/VAT and security approval remain pending.
-
-## Local commands
+## Build and test
 
 ```powershell
-Copy-Item local.settings.example.json local.settings.json
-npm.cmd install
+npm.cmd ci
 npm.cmd run check
-npm.cmd run template:generate
 ```
 
-Never place production secrets in source control or commit `local.settings.json`.
+Local demonstration (Entra enforcement disabled only in local settings):
 
-`templates/survey-template.baseline.docx` is a generated technical baseline with a shared header/footer and one repeating regional-product row. Replace its plain branding with the approved design before enabling Word attachments, but preserve the merge tags.
+```powershell
+npm.cmd run demo:local
+```
 
-## Documentation
+Never commit `local.settings.json`, deployment tokens, client secrets, ingress keys or token-signing secrets.
 
-- `docs/ARCHITECTURE.md` - current no-new-table architecture and diagrams
-- `docs/DATAVERSE-CONTRACT.md` - existing tables and required columns
-- `docs/DATAVERSE-MANUAL-BUILD.md` - exact separate-solution steps and field list
-- `docs/DATAVERSE-MANUAL-EXECUTION-GUIDE.md` - click-by-click Dataverse build sheet for manual execution
-- `docs/STATIC-WEB-APP-SETUP.md` - Free hosting and deployment configuration
-- `docs/AZURE-DEPLOY-NOW.md` - GitHub/Azure deployment and environment configuration
-- `docs/ADMIN-IDENTITY-REQUEST.md` - short Entra/Graph/Dataverse administrator hand-off when app-registration access is unavailable
-- `docs/API-CONTRACT.md` - HTTP endpoints
-- `docs/ACTIONABLE-MESSAGES.md` - Outlook registration/security
-- `docs/FIT-GAP.md` - platform fit and remaining decisions
-- `docs/DEPLOYMENT-RUNBOOK.md` - approval-gated deployment
-- `docs/TEST-PLAN.md` - functional/security tests
-- `docs/IMPLEMENTATION-BACKLOG.md` - delivery tasks
-- `docs/MORNING-START-CHECKLIST.md` - exact starting order
-- `docs/END-TO-END-IMPLEMENTATION-RUNBOOK.md` - complete Dataverse, regional Price List, Azure form, Word, buttons, webhook, Outlook card, test and release execution guide
-- `docs/ZOHO-WORD-TEMPLATE-ASSESSMENT.md` - evidence from all 96 Blank Enquiry DOCX exports and the safe canonical-template decision
+## Authoritative build guide
 
-The isolated unmanaged Dataverse solution shell is at `../power-platform/HolaTeamsSurveyAutomationDemo`. It contains no table assets until the approved Opportunity/Order columns and form sections are built in HolaTeams and exported into it.
+Use [docs/PRODUCTION-SURVEY-RUNBOOK.md](docs/PRODUCTION-SURVEY-RUNBOOK.md) for:
 
-## Safeguards
+- Entra registrations and permissions
+- Dataverse tables, fields, forms and security role
+- regional Price Lists and Products
+- Power Automate send/approval flows
+- Azure settings
+- full acceptance testing
 
-- No new Dataverse tables.
-- No automatic Quote in the demo.
-- No VAT inference.
-- No automatic installation-date replacement.
-- Browser-submitted products are checked against the immutable Opportunity snapshot.
-- The hosted form remains available when an Outlook card cannot render.
+Supporting contracts:
+
+- [docs/DATAVERSE-FIELDS.csv](docs/DATAVERSE-FIELDS.csv)
+- [docs/API-CONTRACT.md](docs/API-CONTRACT.md)
+- [docs/POWER-AUTOMATE-SURVEY-FLOWS.md](docs/POWER-AUTOMATE-SURVEY-FLOWS.md)
+- [docs/ACTIONABLE-MESSAGES.md](docs/ACTIONABLE-MESSAGES.md)
+
+Older documents labelled demonstration or legacy are historical and are not the production source of truth.

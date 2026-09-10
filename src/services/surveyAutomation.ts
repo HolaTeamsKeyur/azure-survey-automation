@@ -7,6 +7,8 @@ import { DataverseClient } from "../infrastructure/dataverse.js";
 import { SurveyDocumentService } from "../infrastructure/documents.js";
 import { GraphClient, type MailAttachment } from "../infrastructure/graph.js";
 import { issueSurveyToken, type SurveyTokenClaims } from "../security/tokens.js";
+import { surveyorLoginUrl } from "../security/clientPrincipal.js";
+import { defaultSurveyLayout } from "../domain/surveyLayout.js";
 
 export class SurveyAutomationService {
   private readonly documents?: SurveyDocumentService;
@@ -31,14 +33,21 @@ export class SurveyAutomationService {
     subject: string;
   }> {
     const context = await this.dataverse.getOpportunityContext(opportunityId);
+    const surveyorEmail = context.region.surveyorMailbox?.trim().toLowerCase();
+    if (!context.surveyorUserId || !surveyorEmail) {
+      throw new Error("The Opportunity requires an assigned Surveyor with an internal email address.");
+    }
     const existing = await this.dataverse.findOpenSession(context.opportunityId);
     if (existing && !["expired", "declined", "failed"].includes(existing.status)) {
+      if (existing.recipientEmail.toLowerCase() !== surveyorEmail) {
+        throw new Error("The open survey was assigned to another surveyor. Cancel or expire it before sending a replacement.");
+      }
       const token = await issueSurveyToken(this.config, {
         sessionId: existing.id,
         tokenId: existing.tokenId,
         recipientHash: hashEmail(existing.recipientEmail)
       });
-      return surveyRequestResult(this.config.publicBaseUrl, context, existing.id, token, true);
+      return surveyRequestResult(this.config, context, existing.id, token, true);
     }
 
     if (!context.priceListId) {
@@ -54,7 +63,7 @@ export class SurveyAutomationService {
     const selected = products.filter(product => product.selectedByDefault).map(product => product.productId);
     const session = await this.dataverse.createSession({
       opportunityId: context.opportunityId,
-      recipientEmail: context.customer.email.toLowerCase(),
+      recipientEmail: surveyorEmail,
       regionId: context.region.id,
       scheduledStart: slot.start.toISOString(),
       scheduledEnd: slot.end.toISOString(),
@@ -83,7 +92,7 @@ export class SurveyAutomationService {
         recipientHash: hashEmail(session.recipientEmail)
       };
       const token = await issueSurveyToken(this.config, claims);
-      const formUrl = `${this.config.publicBaseUrl}/api/survey/${encodeURIComponent(token)}`;
+      const formUrl = buildSurveyFormUrl(this.config, token);
       const attachments: MailAttachment[] = [];
       if (this.config.enableWordDocument) {
         if (!this.documents) throw new Error("Word document generation is enabled but template storage is not configured.");
@@ -100,12 +109,13 @@ export class SurveyAutomationService {
           contentBytes: document.toString("base64")
         });
       }
-      const fallback = `<p>Hello ${escapeHtml(context.customer.name)},</p><p>Your survey is proposed for ${escapeHtml(session.scheduledStart)}.</p><p><a href="${escapeHtml(formUrl)}">Open the secure survey form</a></p>`;
+      const surveyorName = context.region.surveyorName ?? "Surveyor";
+      const fallback = `<p>Hello ${escapeHtml(surveyorName)},</p><p>You have been assigned the property survey for <strong>${escapeHtml(context.name)}</strong> on ${escapeHtml(session.scheduledStart)}.</p><p>Customer: ${escapeHtml(context.customer.name)}<br>Address: ${escapeHtml([context.streetName, context.propertyPostcode].filter(Boolean).join(", "))}</p><p><a href="${escapeHtml(formUrl)}">Open the secure survey form</a></p>`;
       if (this.config.sendSurveyEmail) {
         await this.graph.sendActionableMail(
           context.region.senderMailbox || this.config.GRAPH_SENDER_MAILBOX,
-          context.customer.email,
-          `Your Access4Lofts survey - ${context.name}`,
+          surveyorEmail,
+          `Survey assigned - ${context.name}`,
           fallback,
           undefined,
           attachments
@@ -113,7 +123,7 @@ export class SurveyAutomationService {
       }
       assertTransition("draft", "sent");
       await this.dataverse.setSessionStatus(session.id, "sent");
-      return surveyRequestResult(this.config.publicBaseUrl, context, session.id, token, false);
+      return surveyRequestResult(this.config, context, session.id, token, false);
     } catch (error) {
       await this.dataverse.updateSession(session.id, {
         ht_surveyautomationstatuskey: "failed",
@@ -144,7 +154,7 @@ export class SurveyAutomationService {
   async submitSurvey(
     input: SurveySubmission,
     tokenClaims: SurveyTokenClaims
-  ): Promise<{ status: string; productCount: number; quoteId?: string }> {
+  ): Promise<{ status: string; productCount: number; requestedProductCount: number; quoteId?: string }> {
     const submission = validateSurveySubmission(input);
     const session = await this.dataverse.getSession(submission.sessionId);
     if (session.tokenId !== tokenClaims.tokenId || hashEmail(session.recipientEmail) !== tokenClaims.recipientHash) {
@@ -152,7 +162,7 @@ export class SurveyAutomationService {
     }
     if (new Date(session.expiresAt) <= new Date()) throw new Error("Survey link has expired.");
     if (["accepted", "declined", "reschedule_requested"].includes(session.status)) {
-      return { status: session.status, productCount: session.selectionSnapshot.length };
+      return { status: session.status, productCount: session.selectionSnapshot.length, requestedProductCount: 0 };
     }
     assertTransition(session.status, submission.response);
 
@@ -168,7 +178,7 @@ export class SurveyAutomationService {
         ...commonPatch,
         ht_surveyproductreviewstatuskey: "not_received"
       }, session.version);
-      return { status: submission.response, productCount: 0 };
+      return { status: submission.response, productCount: 0, requestedProductCount: 0 };
     }
 
     const requested = submission.productSelections ?? submission.selectedProductIds.map(productId => ({
@@ -176,11 +186,19 @@ export class SurveyAutomationService {
       quantity: session.productsSnapshot.find(product => product.productId.toLowerCase() === productId.toLowerCase())?.quantity ?? 1
     }));
     const selected = validateProductSelections(requested, session.productsSnapshot);
+    const newProductRequests = submission.newProductRequests ?? [];
+    if (newProductRequests.length && !this.config.enableNewProductRequests) {
+      throw new Error("New product requests are not enabled for this environment.");
+    }
     const context = await this.dataverse.getOpportunityContext(session.opportunityId);
     if (!context.priceListId) throw new Error("The Opportunity has no regional Price List.");
-    await this.dataverse.applyOpportunityPriceList(session.opportunityId, context.priceListId);
+    const currencyId = await this.dataverse.applyOpportunityPriceList(session.opportunityId, context.priceListId);
     await this.dataverse.upsertOpportunityProducts(session.opportunityId, selected);
-    const quote = this.config.createQuoteOnSubmit
+    if (newProductRequests.length) {
+      if (!context.surveyorUserId) throw new Error("The Opportunity has no assigned Surveyor.");
+      await this.dataverse.createNewProductRequests(session.opportunityId, context.surveyorUserId, currencyId, newProductRequests);
+    }
+    const quote = this.config.createQuoteOnSubmit && newProductRequests.length === 0
       ? await this.dataverse.generateQuoteFromOpportunity(session.opportunityId)
       : undefined;
     await this.dataverse.updateSession(session.id, {
@@ -188,15 +206,16 @@ export class SurveyAutomationService {
       ...surveyDetailsPatch(submission.details),
       ht_surveyselectedproductids: selected.map(product => product.productId).join(","),
       ht_surveyselectionsnapshotjson: JSON.stringify(selected),
-      ht_surveyproductreviewstatuskey: "applied"
+      ht_surveyproductreviewstatuskey: newProductRequests.length ? "pending_approval" : "applied"
     }, session.version);
-    return { status: "accepted", productCount: selected.length, quoteId: quote?.quoteId };
+    return { status: "accepted", productCount: selected.length, requestedProductCount: newProductRequests.length, quoteId: quote?.quoteId };
   }
 
   async getSurveyForm(tokenClaims: SurveyTokenClaims): Promise<{
     session: Awaited<ReturnType<DataverseClient["getSession"]>>;
     context: Awaited<ReturnType<DataverseClient["getOpportunityContext"]>>;
     products: ProductOption[];
+    layout: typeof defaultSurveyLayout;
   }> {
     const session = await this.dataverse.getSession(tokenClaims.sessionId);
     if (session.tokenId !== tokenClaims.tokenId || hashEmail(session.recipientEmail) !== tokenClaims.recipientHash) {
@@ -204,7 +223,10 @@ export class SurveyAutomationService {
     }
     if (new Date(session.expiresAt) <= new Date()) throw new Error("Survey link has expired.");
     const context = await this.dataverse.getOpportunityContext(session.opportunityId);
-    return { session, context, products: session.productsSnapshot };
+    const layout = this.config.enableDataverseSurveyLayout
+      ? await this.dataverse.getSurveyLayout(context.region.id) ?? defaultSurveyLayout
+      : defaultSurveyLayout;
+    return { session, context, products: session.productsSnapshot, layout };
   }
 
   parseProductSelection(value: string | undefined): string[] {
@@ -213,7 +235,7 @@ export class SurveyAutomationService {
 }
 
 function surveyRequestResult(
-  publicBaseUrl: string,
+  config: AppConfig,
   context: OpportunityContext,
   sessionId: string,
   token: string,
@@ -222,11 +244,17 @@ function surveyRequestResult(
   return {
     sessionId,
     reused,
-    formUrl: `${publicBaseUrl}/api/survey/${encodeURIComponent(token)}`,
-    recipientEmail: context.customer.email,
-    recipientName: context.customer.name,
-    subject: `Your Access4Lofts survey - ${context.name}`
+    formUrl: buildSurveyFormUrl(config, token),
+    recipientEmail: context.region.surveyorMailbox!,
+    recipientName: context.region.surveyorName ?? context.region.surveyorMailbox!,
+    subject: `Survey assigned - ${context.name}`
   };
+}
+
+function buildSurveyFormUrl(config: AppConfig, token: string): string {
+  return config.requireSurveyorAuth
+    ? surveyorLoginUrl(config.publicBaseUrl, token)
+    : `${config.publicBaseUrl}/api/survey/${encodeURIComponent(token)}`;
 }
 
 function pilotSurveySlot(context: OpportunityContext, durationMinutes: number): { start: Date; end: Date } {

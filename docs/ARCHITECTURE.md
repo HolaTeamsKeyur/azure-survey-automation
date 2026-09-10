@@ -1,4 +1,6 @@
-# Demonstration architecture - no new Dataverse tables
+# Legacy demonstration architecture - superseded
+
+This file describes the original customer-facing demonstration and is retained only for history. Do not use it for the production build. Use `PRODUCTION-SURVEY-RUNBOOK.md`.
 
 ## Selected hosting option
 

@@ -12,9 +12,9 @@ Use one authoritative writer for email and one authoritative writer for Quote cr
 - If Flow 2 must create the Quote, set Azure `CREATE_QUOTE_ON_SUBMIT=false` before enabling Flow 2.
 - Regional pilot Price List: `Access4Lofts Brighton - GBP Survey`.
 
-## Flow 1 - Opportunity - Send Customer Survey Link
+## Flow 1 - Opportunity - Send Assigned Surveyor Link
 
-1. Create an **Automated cloud flow** named `A4L - Opportunity - Send Customer Survey Link`.
+1. Create an **Automated cloud flow** named `A4L - Opportunity - Send Assigned Surveyor Link`.
 2. Trigger: Microsoft Dataverse **When a row is added, modified or deleted**.
 3. Configure the trigger:
    - Change type: `Modified`
@@ -60,9 +60,9 @@ Use one authoritative writer for email and one authoritative writer for Quote cr
 
 ```html
 <p>Hello @{body('Parse_JSON')?['recipientName']},</p>
-<p>Please complete your Access4Lofts survey and select the products you require.</p>
-<p><a href="@{body('Parse_JSON')?['formUrl']}">Open Survey &amp; Quotation Form</a></p>
-<p>This secure link is specific to your enquiry and expires automatically.</p>
+<p>You have been assigned an Access4Lofts property survey.</p>
+<p><a href="@{body('Parse_JSON')?['formUrl']}">Open property survey</a></p>
+<p>Sign in with the same Microsoft 365 account to which this message was sent. The customer must not receive or complete this form.</p>
 ```
 
 7. In trigger settings enable concurrency control and set degree of parallelism to `1`.
@@ -195,9 +195,9 @@ The action waits for a response, so its flow run can remain running until the cu
 
 1. Create/qualify an Enquiry and set Region to `Brighton`.
 2. On the Opportunity verify Franchise Account is `Access4Lofts Brighton`.
-3. Optionally set Survey Start/Finish. A Surveyor is required only when `ENABLE_AUTO_SCHEDULING=true`.
-4. Select **Send Customer Survey**.
-5. Confirm Flow 1 sends exactly one email and the link opens the hosted form.
+3. Set Survey Start/Finish and assign a Surveyor whose Dynamics User has an internal email address. The Surveyor is always required.
+4. Select **Send Surveyor Survey**.
+5. Confirm Flow 1 emails the assigned Surveyor and requires that same surveyor to sign in.
 6. Enter quantities for two products and submit.
 7. In the Opportunity open the **Products** tab and verify exactly two Opportunity Products.
 8. Open the **Quotes** tab and verify one draft Quote containing exactly two Quote Products with the Brighton GBP Price List.

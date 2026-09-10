@@ -1,4 +1,6 @@
-# Azure Static Web Apps Free setup
+# Legacy Azure Static Web Apps Free demo setup
+
+This Free-plan procedure is superseded for production. The surveyor workflow uses Standard with a custom, single-tenant Entra provider; follow `PRODUCTION-SURVEY-RUNBOOK.md`.
 
 This is the selected no-additional-Dynamics-module host for the demonstration. GitHub Actions is the preferred deployment route; the local deployment-token command is a fallback.
 

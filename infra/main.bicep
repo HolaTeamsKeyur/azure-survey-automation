@@ -20,6 +20,13 @@ param azureClientId string
 @description('Demonstration client secret. Prefer a certificate/managed identity for production.')
 param azureClientSecret string
 
+@description('Single-tenant Entra client ID used only for interactive surveyor sign-in')
+param surveyAuthClientId string
+
+@secure()
+@description('Client secret used only by the Static Web Apps custom Entra provider')
+param surveyAuthClientSecret string
+
 @secure()
 @description('At least 32 random characters used to sign customer links')
 param surveyTokenSecret string
@@ -44,8 +51,8 @@ resource staticWebApp 'Microsoft.Web/staticSites@2023-12-01' = {
   name: staticWebAppName
   location: location
   sku: {
-    name: 'Free'
-    tier: 'Free'
+    name: 'Standard'
+    tier: 'Standard'
   }
   properties: {}
 }
@@ -61,9 +68,15 @@ resource apiSettings 'Microsoft.Web/staticSites/config@2023-12-01' = {
     AZURE_TENANT_ID: azureTenantId
     AZURE_CLIENT_ID: azureClientId
     AZURE_CLIENT_SECRET: azureClientSecret
+    SURVEY_AUTH_CLIENT_ID: surveyAuthClientId
+    SURVEY_AUTH_CLIENT_SECRET: surveyAuthClientSecret
     SURVEY_TOKEN_SECRET: surveyTokenSecret
     AUTOMATION_INGRESS_KEY: automationIngressKey
     ENABLE_ACTIONABLE_MESSAGES: string(enableActionableMessages)
+    REQUIRE_SURVEYOR_AUTH: 'true'
+    ENABLE_NEW_PRODUCT_REQUESTS: 'false'
+    ENABLE_DATAVERSE_SURVEY_LAYOUT: 'false'
+    ENABLE_AUTO_SCHEDULING: 'false'
     ACTIONABLE_APP_ID_URI: actionableAppIdUri
     ACTIONABLE_ORIGINATOR_ID: actionableOriginatorId
     ACTIONABLE_ALLOWED_TENANTS: actionableAllowedTenants

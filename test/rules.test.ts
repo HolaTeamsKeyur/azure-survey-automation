@@ -6,6 +6,7 @@ import {
   normalizeGuid,
   splitProductIds,
   validateInstallationSubmission,
+  validateNewProductRequests,
   validateProductSelections,
   validateSelectedProducts,
   validateSurveySubmission
@@ -59,4 +60,9 @@ test("enforces installation transitions and input length", () => {
   assert.throws(() => assertInstallationTransition("draft", "accepted"));
   assert.equal(validateInstallationSubmission({ response: "declined", reason: "  Not required  " }).reason, "Not required");
   assert.throws(() => validateInstallationSubmission({ response: "declined", reason: "x".repeat(2_001) }));
+});
+test("validates governed non-catalogue product requests", () => {
+  assert.deepEqual(validateNewProductRequests([{ name: "  Special trim  ", quantity: 2.5, estimatedUnitPrice: 12.345 }]), [{ name: "Special trim", quantity: 2.5, estimatedUnitPrice: 12.35, description: undefined, unitName: undefined, justification: undefined }]);
+  assert.throws(() => validateNewProductRequests([{ name: "", quantity: 1 }]), /requires a name/);
+  assert.throws(() => validateNewProductRequests([{ name: "Special trim", quantity: 0 }]), /invalid quantity/);
 });

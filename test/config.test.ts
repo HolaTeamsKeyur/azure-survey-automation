@@ -17,6 +17,8 @@ test("loads a safe browser-link-only configuration", () => {
   assert.equal(config.enableActionableMessages, false);
   assert.equal(config.enableWordDocument, false);
   assert.equal(config.sendInstallationEmail, true);
+  assert.equal(config.enableAutoScheduling, false);
+  assert.equal(config.requireSurveyorAuth, true);
   assert.equal(config.dataverseUrl, valid.DATAVERSE_URL);
 });
 

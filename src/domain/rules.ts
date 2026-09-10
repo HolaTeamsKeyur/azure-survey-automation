@@ -1,6 +1,7 @@
 import type {
   InstallationSessionStatus,
   InstallationSubmission,
+  NewProductRequest,
   ProductOption,
   SurveyProductSelection,
   SurveyProductSelectionSnapshot,
@@ -81,8 +82,32 @@ export function validateSurveySubmission(input: SurveySubmission): SurveySubmiss
       ladderArcType: normalizeOptionalText(input.details.ladderArcType, 100, "Ladder arc type"),
       planNotes: normalizeOptionalText(input.details.planNotes, 4_000, "Plan"),
       additionalInfo: normalizeOptionalText(input.details.additionalInfo, 4_000, "Additional information")
-    } : undefined
+    } : undefined,
+    newProductRequests: validateNewProductRequests(input.newProductRequests ?? [])
   };
+}
+
+export function validateNewProductRequests(input: readonly NewProductRequest[]): NewProductRequest[] {
+  if (!Array.isArray(input) || input.length > 10) throw new Error("A survey can request at most 10 new products.");
+  return input.map((request, index) => {
+    const name = normalizeOptionalText(request.name, 200, `New product ${index + 1} name`);
+    if (!name) throw new Error(`New product ${index + 1} requires a name.`);
+    if (!Number.isFinite(request.quantity) || request.quantity <= 0 || request.quantity > 100_000) {
+      throw new Error(`New product ${index + 1} has an invalid quantity.`);
+    }
+    const estimatedUnitPrice = request.estimatedUnitPrice;
+    if (estimatedUnitPrice !== undefined && (!Number.isFinite(estimatedUnitPrice) || estimatedUnitPrice < 0 || estimatedUnitPrice > 10_000_000)) {
+      throw new Error(`New product ${index + 1} has an invalid estimated price.`);
+    }
+    return {
+      name,
+      description: normalizeOptionalText(request.description, 2_000, `New product ${index + 1} description`),
+      quantity: round(request.quantity, 3),
+      unitName: normalizeOptionalText(request.unitName, 100, `New product ${index + 1} unit`),
+      estimatedUnitPrice: estimatedUnitPrice === undefined ? undefined : roundMoney(estimatedUnitPrice),
+      justification: normalizeOptionalText(request.justification, 1_000, `New product ${index + 1} justification`)
+    };
+  });
 }
 
 export function validateInstallationSubmission(input: InstallationSubmission): InstallationSubmission {

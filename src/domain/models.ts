@@ -29,6 +29,7 @@ export interface RegionContext {
   autoScheduleEnabled: boolean;
   surveyorMailbox?: string;
   surveyorUserId?: string;
+  surveyorName?: string;
 }
 
 export interface CustomerContext {
@@ -46,6 +47,7 @@ export interface OpportunityContext {
   propertyPostcode?: string;
   streetName?: string;
   priceListId?: string;
+  currencyId?: string;
   surveyorUserId?: string;
   scheduledStart?: string;
   scheduledEnd?: string;
@@ -109,6 +111,16 @@ export interface SurveySubmission {
   feedbackScore?: number;
   feedbackComments?: string;
   details?: SurveyDetails;
+  newProductRequests?: NewProductRequest[];
+}
+
+export interface NewProductRequest {
+  name: string;
+  description?: string;
+  quantity: number;
+  unitName?: string;
+  estimatedUnitPrice?: number;
+  justification?: string;
 }
 
 export interface SurveyDetails {

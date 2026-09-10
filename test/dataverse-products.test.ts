@@ -105,3 +105,32 @@ test("applies the regional price list and generates one quote from the opportuni
   assert.ok(generateCall);
   assert.equal(generateCall.init?.method, "POST");
 });
+
+test("creates a pending governed request instead of a Product master record", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    calls.push({ url: String(input), init });
+    return new Response(null, { status: 204 });
+  }) as typeof fetch;
+  const credential = { getToken: async () => ({ token: "test", expiresOnTimestamp: Date.now() + 60_000 }) } as TokenCredential;
+  try {
+    await new DataverseClient("https://example.crm.dynamics.com", credential).createNewProductRequests(
+      "11111111-1111-4111-8111-111111111111",
+      "22222222-2222-4222-8222-222222222222",
+      "33333333-3333-4333-8333-333333333333",
+      [{ name: "Special trim", quantity: 2, unitName: "each", justification: "Required on site" }]
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /ht_surveyproductrequests\(ht_sourcekey='11111111-1111-4111-8111-111111111111:1'\)$/);
+  const body = JSON.parse(String(calls[0].init?.body));
+  assert.equal(calls[0].init?.method, "PATCH");
+  assert.equal(body.ht_sourcekey, "11111111-1111-4111-8111-111111111111:1");
+  assert.equal(body["transactioncurrencyid@odata.bind"], "/transactioncurrencies(33333333-3333-4333-8333-333333333333)");
+  assert.equal(body.ht_statuskey, "pending");
+  assert.equal(body["ht_Opportunity@odata.bind"], "/opportunities(11111111-1111-4111-8111-111111111111)");
+  assert.equal(body.productid, undefined);
+});

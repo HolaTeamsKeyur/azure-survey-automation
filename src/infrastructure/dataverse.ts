@@ -3,6 +3,7 @@ import type {
   InstallationContext,
   InstallationSession,
   InstallationSubmission,
+  NewProductRequest,
   OpportunityContext,
   ProductOption,
   SurveyProductSelectionSnapshot,
@@ -10,6 +11,7 @@ import type {
   SurveySessionStatus
 } from "../domain/models.js";
 import { normalizeGuid } from "../domain/rules.js";
+import { parseSurveyLayout, type SurveyLayout } from "../domain/surveyLayout.js";
 
 export class DataverseClient {
   constructor(
@@ -41,7 +43,7 @@ export class DataverseClient {
   async getOpportunityContext(opportunityId: string): Promise<OpportunityContext> {
     const id = normalizeGuid(opportunityId);
     const row = await this.request<Record<string, unknown>>(
-      `opportunities(${id})?$select=opportunityid,name,ht_propertypostcode,ht_streetname,ht_surveystart,ht_surveyfinish,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_ht_surveyor_value&` +
+      `opportunities(${id})?$select=opportunityid,name,ht_propertypostcode,ht_streetname,ht_surveystart,ht_surveyfinish,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_transactioncurrencyid_value,_ht_surveyor_value&` +
       `$expand=parentcontactid($select=contactid,fullname,emailaddress1,mobilephone),ht_Region($select=ht_regionid,ht_name,ht_regioncode,ht_email,ht_telephone,_ht_franchise_value)`
     );
     const contact = row.parentcontactid as Record<string, unknown> | undefined;
@@ -59,11 +61,13 @@ export class DataverseClient {
     }
     const surveyorUserId = stringOrUndefined(row._ht_surveyor_value);
     let surveyorMailbox: string | undefined;
+    let surveyorName: string | undefined;
     if (surveyorUserId) {
       const surveyor = await this.request<Record<string, unknown>>(
-        `systemusers(${normalizeGuid(surveyorUserId)})?$select=internalemailaddress`
+        `systemusers(${normalizeGuid(surveyorUserId)})?$select=fullname,internalemailaddress`
       );
       surveyorMailbox = stringOrUndefined(surveyor.internalemailaddress);
+      surveyorName = stringOrUndefined(surveyor.fullname);
     }
 
     return {
@@ -72,6 +76,7 @@ export class DataverseClient {
       propertyPostcode: stringOrUndefined(row.ht_propertypostcode),
       streetName: stringOrUndefined(row.ht_streetname),
       priceListId,
+      currencyId: stringOrUndefined(row._transactioncurrencyid_value),
       surveyorUserId,
       scheduledStart: stringOrUndefined(row.ht_surveystart),
       scheduledEnd: stringOrUndefined(row.ht_surveyfinish),
@@ -93,7 +98,8 @@ export class DataverseClient {
         businessDayEndHour: 17,
         autoScheduleEnabled: true,
         surveyorUserId,
-        surveyorMailbox
+        surveyorMailbox,
+        surveyorName
       }
     };
   }
@@ -127,7 +133,7 @@ export class DataverseClient {
     });
   }
 
-  async applyOpportunityPriceList(opportunityId: string, priceListId: string): Promise<void> {
+  async applyOpportunityPriceList(opportunityId: string, priceListId: string): Promise<string | undefined> {
     const opportunity = normalizeGuid(opportunityId);
     const priceList = normalizeGuid(priceListId);
     const [opportunityRow, priceListRow] = await Promise.all([
@@ -149,6 +155,7 @@ export class DataverseClient {
     if (Object.keys(patch).length) {
       await this.request(`opportunities(${opportunity})`, { method: "PATCH", body: JSON.stringify(patch) });
     }
+    return currencyId;
   }
 
   async upsertOpportunityProducts(opportunityId: string, selections: readonly SurveyProductSelectionSnapshot[]): Promise<void> {
@@ -180,6 +187,48 @@ export class DataverseClient {
         });
       }
     }
+  }
+
+  async createNewProductRequests(
+    opportunityId: string,
+    surveyorUserId: string,
+    currencyId: string | undefined,
+    requests: readonly NewProductRequest[]
+  ): Promise<void> {
+    const opportunity = normalizeGuid(opportunityId);
+    const surveyor = normalizeGuid(surveyorUserId);
+    for (const [index, request] of requests.entries()) {
+      const sourceKey = `${opportunity}:${index + 1}`;
+      await this.request(`ht_surveyproductrequests(ht_sourcekey='${sourceKey}')`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          ht_sourcekey: sourceKey,
+          ht_name: request.name,
+          ht_description: request.description ?? null,
+          ht_quantity: request.quantity,
+          ht_unitname: request.unitName ?? null,
+          ht_estimatedunitprice: request.estimatedUnitPrice ?? null,
+          ht_justification: request.justification ?? null,
+          ht_statuskey: "pending",
+          "ht_Opportunity@odata.bind": `/opportunities(${opportunity})`,
+          "ht_Surveyor@odata.bind": `/systemusers(${surveyor})`,
+          ...(currencyId ? { "transactioncurrencyid@odata.bind": `/transactioncurrencies(${normalizeGuid(currencyId)})` } : {})
+        })
+      });
+    }
+  }
+
+  async getSurveyLayout(regionId: string): Promise<SurveyLayout | undefined> {
+    const region = normalizeGuid(regionId);
+    const select = "$select=ht_surveytemplateid,ht_name,ht_definitionjson,ht_version,ht_isdefault,modifiedon";
+    const regional = await this.request<{ value: Array<Record<string, unknown>> }>(
+      `ht_surveytemplates?${select}&$filter=statecode eq 0 and _ht_region_value eq ${region}&$orderby=modifiedon desc&$top=1`
+    );
+    const row = regional.value[0] ?? (await this.request<{ value: Array<Record<string, unknown>> }>(
+      `ht_surveytemplates?${select}&$filter=statecode eq 0 and ht_isdefault eq true&$orderby=modifiedon desc&$top=1`
+    )).value[0];
+    const definition = stringOrUndefined(row?.ht_definitionjson);
+    return definition ? parseSurveyLayout(definition) : undefined;
   }
 
   async generateQuoteFromOpportunity(opportunityId: string): Promise<{ quoteId: string; reused: boolean }> {

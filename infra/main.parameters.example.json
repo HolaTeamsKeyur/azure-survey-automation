@@ -9,6 +9,8 @@
     "azureTenantId": { "value": "REPLACE-TENANT-GUID" },
     "azureClientId": { "value": "REPLACE-APP-GUID" },
     "azureClientSecret": { "value": "DO-NOT-COMMIT-A-REAL-SECRET" },
+    "surveyAuthClientId": { "value": "REPLACE-INTERACTIVE-APP-GUID" },
+    "surveyAuthClientSecret": { "value": "DO-NOT-COMMIT-A-REAL-SECRET" },
     "surveyTokenSecret": { "value": "DO-NOT-COMMIT-A-REAL-SECRET" },
     "automationIngressKey": { "value": "DO-NOT-COMMIT-A-REAL-SECRET" },
     "enableActionableMessages": { "value": false },
