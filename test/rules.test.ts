@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   assertInstallationTransition,
   assertTransition,
+  normalizeGuid,
   splitProductIds,
   validateInstallationSubmission,
   validateProductSelections,
@@ -12,6 +13,10 @@ import {
 
 const a = "11111111-1111-4111-8111-111111111111";
 const b = "22222222-2222-4222-8222-222222222222";
+
+test("normalises Dataverse GUIDs without enforcing an RFC UUID version", () => {
+  assert.equal(normalizeGuid("{986D8A4F-05AD-F111-AAAC-6045BD00754C}"), "986d8a4f-05ad-f111-aaac-6045bd00754c");
+});
 
 test("allows supported survey transition", () => assert.doesNotThrow(() => assertTransition("sent", "accepted")));
 test("rejects terminal transition", () => assert.throws(() => assertTransition("accepted", "sent")));
