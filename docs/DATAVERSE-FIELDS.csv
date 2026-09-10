@@ -1,0 +1,19 @@
+Table,Display Name,Schema Name,Type,Required For Demo,User Form
+Opportunity,Survey Automation Status,ht_SurveyAutomationStatusKey,Text 50,Yes,Read-only
+Opportunity,Survey Recipient Email,ht_SurveyRecipientEmail,Email 200,Yes,Read-only
+Opportunity,Survey Response Expires At,ht_SurveyExpiresAt,DateTime TimeZoneIndependent,Yes,Read-only
+Opportunity,Survey Token ID,ht_SurveyTokenId,Text 100,Yes,Hidden
+Opportunity,Survey Allowed Product IDs,ht_SurveyAllowedProductIds,Multiline 100000,Yes,Hidden
+Opportunity,Survey Products Snapshot,ht_SurveyProductsSnapshotJson,Multiline 1000000,Yes,Hidden
+Opportunity,Survey Selected Product IDs,ht_SurveySelectedProductIds,Multiline 100000,Yes,Read-only
+Opportunity,Survey Response Reason,ht_SurveyResponseReason,Multiline 4000,Yes,Read-only
+Opportunity,Survey Feedback Score,ht_SurveyFeedbackScore,Whole Number 1-5,Yes,Read-only
+Opportunity,Survey Feedback Comments,ht_SurveyFeedbackComments,Multiline 4000,Yes,Read-only
+Opportunity,Survey Responded On,ht_SurveyRespondedOn,DateTime UserLocal,Yes,Read-only
+Opportunity,Survey Automation Last Error,ht_SurveyAutomationLastError,Multiline 4000,Yes,Admin only
+Order Confirmation,Installation Customer Response,ht_InstallationResponseKey,Text 50,Yes,Read-only
+Order Confirmation,Installation Recipient Email,ht_InstallationRecipientEmail,Email 200,Yes,Read-only
+Order Confirmation,Installation Response Expires At,ht_InstallationResponseExpiresAt,DateTime TimeZoneIndependent,Yes,Read-only
+Order Confirmation,Installation Response Token ID,ht_InstallationResponseTokenId,Text 100,Yes,Hidden
+Order Confirmation,Installation Response Reason,ht_InstallationResponseReason,Multiline 4000,Yes,Read-only
+Order Confirmation,Installation Responded On,ht_InstallationRespondedOn,DateTime UserLocal,Yes,Read-only

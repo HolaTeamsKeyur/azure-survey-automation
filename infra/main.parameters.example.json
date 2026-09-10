@@ -1,0 +1,19 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "staticWebAppName": { "value": "a4l-survey-demo-REPLACE" },
+    "location": { "value": "westeurope" },
+    "dataverseUrl": { "value": "https://holateams-operations.crm.dynamics.com" },
+    "graphSenderMailbox": { "value": "REPLACE@example.com" },
+    "azureTenantId": { "value": "REPLACE-TENANT-GUID" },
+    "azureClientId": { "value": "REPLACE-APP-GUID" },
+    "azureClientSecret": { "value": "DO-NOT-COMMIT-A-REAL-SECRET" },
+    "surveyTokenSecret": { "value": "DO-NOT-COMMIT-A-REAL-SECRET" },
+    "automationIngressKey": { "value": "DO-NOT-COMMIT-A-REAL-SECRET" },
+    "enableActionableMessages": { "value": false },
+    "actionableAppIdUri": { "value": "disabled" },
+    "actionableOriginatorId": { "value": "disabled" },
+    "actionableAllowedTenants": { "value": "" }
+  }
+}

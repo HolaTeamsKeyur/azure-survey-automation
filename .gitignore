@@ -1,0 +1,10 @@
+node_modules/
+dist/
+local.settings.json
+*.docx
+!templates/survey-template.baseline.docx
+*.pdf
+coverage/
+.env
+.env.*
+infra/main.parameters.local.json

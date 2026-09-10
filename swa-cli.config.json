@@ -1,0 +1,10 @@
+{
+  "configurations": {
+    "holateams-survey-demo": {
+      "appLocation": "web",
+      "apiLocation": ".",
+      "outputLocation": ".",
+      "apiBuildCommand": "npm run build"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "DATAVERSE_URL": "https://REPLACE.crm.dynamics.com",
+    "GRAPH_SENDER_MAILBOX": "surveys@example.com",
+    "PUBLIC_BASE_URL": "https://REPLACE.azurewebsites.net",
+    "SURVEY_TOKEN_SECRET": "SET-FROM-KEY-VAULT-NOT-HERE",
+    "AUTOMATION_INGRESS_KEY": "SET-FROM-KEY-VAULT-NOT-HERE",
+    "ENABLE_ACTIONABLE_MESSAGES": "false",
+    "ACTIONABLE_APP_ID_URI": "api://auth-am-REPLACE/REPLACE",
+    "ACTIONABLE_ORIGINATOR_ID": "REPLACE-AFTER-PROVIDER-REGISTRATION",
+    "ACTIONABLE_ALLOWED_TENANTS": "REPLACE-TENANT-GUID",
+    "ACTIONABLE_ALLOW_GLOBAL_TENANTS": "false",
+    "ENABLE_WORD_DOCUMENT": "false",
+    "TEMPLATE_STORAGE_URL": "https://REPLACE.blob.core.windows.net",
+    "TEMPLATE_CONTAINER": "document-templates",
+    "SURVEY_TEMPLATE_BLOB": "survey/survey-template.docx",
+    "DEFAULT_SURVEY_DURATION_MINUTES": "60",
+    "SURVEY_BUSINESS_START_HOUR": "9",
+    "SURVEY_BUSINESS_END_HOUR": "17",
+    "DEFAULT_TIME_ZONE": "Europe/London"
+  }
+}

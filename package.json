@@ -1,0 +1,34 @@
+{
+  "name": "holateams-survey-automation",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/src/functions/*.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test test/**/*.test.ts",
+    "template:generate": "node scripts/generate-survey-template.mjs",
+    "azure:deploy": "npm run check && npx --yes @azure/static-web-apps-cli@2.0.10 deploy holateams-survey-demo --env production",
+    "start": "func start",
+    "check": "npm run build && npm test"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.7.2",
+    "@azure/identity": "^4.11.1",
+    "@azure/storage-blob": "^12.28.0",
+    "docxtemplater": "^3.66.7",
+    "jose": "^6.1.0",
+    "luxon": "^3.7.2",
+    "pizzip": "^3.2.0",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.7.1",
+    "@types/node": "^22.18.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
