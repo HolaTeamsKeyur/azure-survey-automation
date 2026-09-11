@@ -13,7 +13,37 @@ import type {
 import { normalizeGuid } from "../domain/rules.js";
 import { parseSurveyLayout, type SurveyLayout } from "../domain/surveyLayout.js";
 
+const OPTIONAL_OPPORTUNITY_SURVEY_COLUMNS = [
+  "ht_surveyaddress",
+  "ht_surveypropertytype",
+  "ht_surveypropertyage",
+  "ht_surveyadvertisingsource",
+  "ht_surveyexistinghatchtype",
+  "ht_surveyflooringrequired",
+  "ht_surveyladderrequired",
+  "ht_surveylightrequired",
+  "ht_surveyinsulationrequired",
+  "ht_surveyotherinformation",
+  "ht_quotationdate",
+  "ht_surveyhousetype",
+  "ht_surveyrooftype",
+  "ht_surveyceilingheightcm",
+  "ht_surveyhatchtopwidthcm",
+  "ht_surveyhatchtoplengthcm",
+  "ht_surveyhatchinsidewidthcm",
+  "ht_surveyhatchinsidelengthcm",
+  "ht_surveyladderclearancewidthcm",
+  "ht_surveyladderarcclearancecm",
+  "ht_surveyladderarctype",
+  "ht_surveyplannotes",
+  "ht_surveyadditionalinfo"
+] as const;
+
+const OPTIONAL_OPPORTUNITY_SURVEY_COLUMN_SET = new Set<string>(OPTIONAL_OPPORTUNITY_SURVEY_COLUMNS);
+
 export class DataverseClient {
+  private opportunitySurveyColumnsPromise?: Promise<Set<string>>;
+
   constructor(
     private readonly baseUrl: string,
     private readonly credential: TokenCredential = new DefaultAzureCredential()
@@ -41,12 +71,51 @@ export class DataverseClient {
     return await response.json() as T;
   }
 
+  private getAvailableOpportunitySurveyColumns(): Promise<Set<string>> {
+    this.opportunitySurveyColumnsPromise ??= this.loadAvailableOpportunitySurveyColumns();
+    return this.opportunitySurveyColumnsPromise;
+  }
+
+  private async loadAvailableOpportunitySurveyColumns(): Promise<Set<string>> {
+    try {
+      const result = await this.request<{ value: Array<{ LogicalName?: string }> }>(
+        "EntityDefinitions(LogicalName='opportunity')/Attributes?$select=LogicalName"
+      );
+      return new Set(
+        result.value
+          .map(attribute => attribute.LogicalName?.toLowerCase())
+          .filter((name): name is string =>
+            typeof name === "string" && OPTIONAL_OPPORTUNITY_SURVEY_COLUMN_SET.has(name)
+          )
+      );
+    } catch {
+      // Metadata access is not essential. If the application user cannot read
+      // metadata, omit the optional survey-detail columns and use legacy fields.
+      return new Set<string>();
+    }
+  }
+
+  private async removeUnavailableOpportunitySurveyColumns(
+    patch: Record<string, unknown>
+  ): Promise<Record<string, unknown>> {
+    const available = await this.getAvailableOpportunitySurveyColumns();
+    return Object.fromEntries(
+      Object.entries(patch).filter(([name]) =>
+        !OPTIONAL_OPPORTUNITY_SURVEY_COLUMN_SET.has(name.toLowerCase()) || available.has(name.toLowerCase())
+      )
+    );
+  }
+
   async getOpportunityContext(opportunityId: string): Promise<OpportunityContext> {
     const id = normalizeGuid(opportunityId);
+    const availableSurveyColumns = await this.getAvailableOpportunitySurveyColumns();
+    const optionalSelect = OPTIONAL_OPPORTUNITY_SURVEY_COLUMNS
+      .filter(name => availableSurveyColumns.has(name))
+      .join(",");
     const row = await this.request<Record<string, unknown>>(
       `opportunities(${id})?$select=opportunityid,name,ht_propertypostcode,ht_streetname,ht_surveystart,ht_surveyfinish,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_transactioncurrencyid_value,_ht_surveyor_value,` +
-      `ht_propertytype,ht_propertyage,ht_existinghatchtype,ht_loftboardingrequired,ht_loftladderrequired,ht_lightrequired,ht_insulationrequired,` +
-      `ht_surveyaddress,ht_surveypropertytype,ht_surveypropertyage,ht_surveyadvertisingsource,ht_surveyexistinghatchtype,ht_surveyflooringrequired,ht_surveyladderrequired,ht_surveylightrequired,ht_surveyinsulationrequired,ht_surveyotherinformation,ht_quotationdate,ht_surveyhousetype,ht_surveyrooftype,ht_surveyceilingheightcm,ht_surveyhatchtopwidthcm,ht_surveyhatchtoplengthcm,ht_surveyhatchinsidewidthcm,ht_surveyhatchinsidelengthcm,ht_surveyladderclearancewidthcm,ht_surveyladderarcclearancecm,ht_surveyladderarctype,ht_surveyplannotes,ht_surveyadditionalinfo&` +
+      `ht_propertytype,ht_propertyage,ht_existinghatchtype,ht_loftboardingrequired,ht_loftladderrequired,ht_lightrequired,ht_insulationrequired` +
+      `${optionalSelect ? `,${optionalSelect}` : ""}&` +
       `$expand=parentcontactid($select=contactid,fullname,emailaddress1,mobilephone),ht_Region($select=ht_regionid,ht_name,ht_regioncode,ht_email,ht_telephone,_ht_franchise_value)`
     );
     const contact = row.parentcontactid as Record<string, unknown> | undefined;
@@ -323,10 +392,11 @@ export class DataverseClient {
   async updateSession(sessionId: string, patch: Record<string, unknown>, expectedVersion?: number): Promise<void> {
     const headers: Record<string, string> = {};
     if (expectedVersion) headers["If-Match"] = `W/\"${expectedVersion}\"`;
+    const compatiblePatch = await this.removeUnavailableOpportunitySurveyColumns(patch);
     await this.request(`opportunities(${normalizeGuid(sessionId)})`, {
       method: "PATCH",
       headers,
-      body: JSON.stringify(patch)
+      body: JSON.stringify(compatiblePatch)
     });
   }
 

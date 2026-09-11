@@ -33,6 +33,47 @@ test("resolves franchise identity, default price list and prefilled survey detai
     globalThis.fetch = originalFetch;
   }
   assert.ok(calls.some(url => url.includes("/accounts(44444444-4444-4444-8444-444444444444)")));
+  const opportunityCall = calls.find(url => url.includes("/opportunities("));
+  assert.ok(opportunityCall);
+  assert.doesNotMatch(opportunityCall, /ht_surveyaddress/);
+});
+
+test("saves only optional Opportunity survey columns that exist in Dataverse", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input);
+    calls.push({ url, init });
+    if (url.includes("/EntityDefinitions(LogicalName='opportunity')/Attributes")) {
+      return new Response(JSON.stringify({
+        value: [
+          { LogicalName: "ht_surveypropertytype" },
+          { LogicalName: "ht_surveyautomationstatuskey" }
+        ]
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    return new Response(null, { status: 204 });
+  }) as typeof fetch;
+  const credential = { getToken: async () => ({ token: "test", expiresOnTimestamp: Date.now() + 60_000 }) } as TokenCredential;
+  try {
+    await new DataverseClient("https://example.crm.dynamics.com", credential).updateSession(
+      "11111111-1111-4111-8111-111111111111",
+      {
+        ht_surveyaddress: "10 Test Road",
+        ht_surveypropertytype: "Semi-detached",
+        ht_surveyautomationstatuskey: "submitted"
+      }
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  const update = calls.find(call => call.init?.method === "PATCH");
+  assert.ok(update);
+  const body = JSON.parse(String(update.init?.body));
+  assert.equal(body.ht_surveyaddress, undefined);
+  assert.equal(body.ht_surveypropertytype, "Semi-detached");
+  assert.equal(body.ht_surveyautomationstatuskey, "submitted");
 });
 
 test("loads survey-enabled regional Price List Items without an invalid statecode filter", async () => {
