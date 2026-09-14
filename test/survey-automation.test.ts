@@ -69,13 +69,17 @@ test("submission sends the same selected snapshot to the Opportunity and Quote",
   let opportunitySelection: unknown;
   let quoteSelection: unknown;
   let savedPatch: Record<string, unknown> = {};
+  let finalExpectedVersion: number | undefined;
   const dataverse = {
     getSession: async () => session,
     getOpportunityContext: async () => opportunity,
     applyOpportunityPriceList: async () => "88888888-8888-4888-8888-888888888888",
     replaceOpportunityProducts: async (_opportunityId: string, selected: unknown) => { opportunitySelection = selected; },
     generateQuoteFromOpportunity: async (_opportunityId: string, selected: unknown) => { quoteSelection = selected; return { quoteId: "99999999-9999-4999-8999-999999999999", reused: false }; },
-    updateSession: async (_id: string, patch: Record<string, unknown>) => { savedPatch = patch; }
+    updateSession: async (_id: string, patch: Record<string, unknown>, expectedVersion?: number) => {
+      savedPatch = patch;
+      finalExpectedVersion = expectedVersion;
+    }
   } as unknown as DataverseClient;
   const service = new SurveyAutomationService(config({ CREATE_QUOTE_ON_SUBMIT: "true" }), dataverse, {} as GraphClient);
   const result = await service.submitSurvey(
@@ -87,4 +91,5 @@ test("submission sends the same selected snapshot to the Opportunity and Quote",
   assert.equal(savedPatch.ht_surveyselectedproductids, product.productId);
   assert.equal(savedPatch.ht_surveypropertytype, "Semi-detached");
   assert.equal(result.quoteId, "99999999-9999-4999-8999-999999999999");
+  assert.equal(finalExpectedVersion, undefined);
 });

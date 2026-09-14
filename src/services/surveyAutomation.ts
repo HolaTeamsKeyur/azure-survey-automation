@@ -201,13 +201,16 @@ export class SurveyAutomationService {
     const quote = this.config.createQuoteOnSubmit && newProductRequests.length === 0
       ? await this.dataverse.generateQuoteFromOpportunity(session.opportunityId, selected)
       : undefined;
+    // Applying the Price List can update this same Opportunity and advance its
+    // RowVersion. This is a sparse PATCH, so do not reuse the pre-processing
+    // version as an If-Match value here.
     await this.dataverse.updateSession(session.id, {
       ...commonPatch,
       ...surveyDetailsPatch(submission.details),
       ht_surveyselectedproductids: selected.map(product => product.productId).join(","),
       ht_surveyselectionsnapshotjson: JSON.stringify(selected),
       ht_surveyproductreviewstatuskey: newProductRequests.length ? "pending_approval" : "applied"
-    }, session.version);
+    });
     return { status: "accepted", productCount: selected.length, requestedProductCount: newProductRequests.length, quoteId: quote?.quoteId };
   }
 
