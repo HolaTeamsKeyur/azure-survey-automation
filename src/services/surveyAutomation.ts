@@ -60,7 +60,6 @@ export class SurveyAutomationService {
       : pilotSurveySlot(context, this.config.DEFAULT_SURVEY_DURATION_MINUTES);
 
     const tokenId = randomUUID();
-    const selected = products.filter(product => product.selectedByDefault).map(product => product.productId);
     const session = await this.dataverse.createSession({
       opportunityId: context.opportunityId,
       recipientEmail: surveyorEmail,
@@ -69,9 +68,7 @@ export class SurveyAutomationService {
       scheduledEnd: slot.end.toISOString(),
       expiresAt: new Date(Date.now() + 14 * 86_400_000).toISOString(),
       status: "draft",
-      allowedProductIds: products.map(product => product.productId),
       productsSnapshot: products,
-      selectedProductIds: selected,
       selectionSnapshot: [],
       tokenId
     });
@@ -169,9 +166,6 @@ export class SurveyAutomationService {
     const commonPatch = {
       ht_surveyautomationstatuskey: submission.response,
       ht_surveyautomationlasterror: null,
-      ht_surveyresponsereason: submission.reason ?? null,
-      ht_surveyfeedbackscore: submission.feedbackScore ?? null,
-      ht_surveyfeedbackcomments: submission.feedbackComments ?? null,
       ht_surveyrespondedon: new Date().toISOString()
     };
     if (submission.response !== "accepted") {
@@ -210,7 +204,6 @@ export class SurveyAutomationService {
     await this.dataverse.updateSession(session.id, {
       ...commonPatch,
       ...surveyDetailsPatch(submission.details),
-      ht_surveyselectedproductids: selected.map(product => product.productId).join(","),
       ht_surveyselectionsnapshotjson: JSON.stringify(selected),
       ht_surveyproductreviewstatuskey: newProductRequests.length ? "pending_approval" : "applied"
     });

@@ -82,14 +82,9 @@ These are columns, not tables. Before adding one, confirm that an equivalent col
 | Survey Recipient Email | `ht_SurveyRecipientEmail` | Email | Recipient snapshot |
 | Survey Response Expires At | `ht_SurveyExpiresAt` | Date/time | Signed-link expiry |
 | Survey Token ID | `ht_SurveyTokenId` | Text 100 | Random identifier; never the signed token |
-| Survey Allowed Product IDs | `ht_SurveyAllowedProductIds` | Multiline text | Immutable allowed IDs |
 | Survey Products Snapshot | `ht_SurveyProductsSnapshotJson` | Multiline text | Names, quantities and Price List Item prices at send time |
-| Survey Selected Product IDs | `ht_SurveySelectedProductIds` | Multiline text | Customer selection |
 | Survey Selection Snapshot | `ht_SurveySelectionSnapshotJson` | Multiline text | Selected quantities, unit-price snapshot and product notes |
 | Survey Product Review Status | `ht_SurveyProductReviewStatusKey` | Text 30 | `not_received`, `pending_review`, `reviewed`, `rejected` |
-| Survey Response Reason | `ht_SurveyResponseReason` | Multiline text | Decline/reschedule/other message |
-| Survey Feedback Score | `ht_SurveyFeedbackScore` | Whole number 1-5 | Optional |
-| Survey Feedback Comments | `ht_SurveyFeedbackComments` | Multiline text | Optional |
 | Survey Responded On | `ht_SurveyRespondedOn` | Date/time | Audit timestamp |
 | Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiline text 4,000 | Internal timestamp, survey reference ID and processing error; cleared after success |
 

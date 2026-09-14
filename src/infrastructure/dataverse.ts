@@ -474,9 +474,7 @@ export class DataverseClient {
         ht_surveyrecipientemail: input.recipientEmail,
         ht_surveyexpiresat: input.expiresAt,
         ht_surveyautomationstatuskey: input.status,
-        ht_surveyallowedproductids: input.allowedProductIds.join(","),
         ht_surveyproductssnapshotjson: JSON.stringify(input.productsSnapshot),
-        ht_surveyselectedproductids: input.selectedProductIds.join(","),
         ht_surveyselectionsnapshotjson: JSON.stringify(input.selectionSnapshot),
         ht_surveyproductreviewstatuskey: "not_received",
         ht_surveytokenid: input.tokenId
@@ -507,7 +505,7 @@ export class DataverseClient {
   async getSession(sessionId: string): Promise<SurveySession> {
     const id = normalizeGuid(sessionId);
     const row = await this.request<Record<string, unknown>>(
-      `opportunities(${id})?$select=opportunityid,ht_surveyautomationstatuskey,ht_surveystart,ht_surveyfinish,ht_surveyexpiresat,ht_surveyallowedproductids,ht_surveyproductssnapshotjson,ht_surveyselectedproductids,ht_surveyselectionsnapshotjson,ht_surveytokenid,ht_surveyrecipientemail,versionnumber,_ht_region_value`
+      `opportunities(${id})?$select=opportunityid,ht_surveyautomationstatuskey,ht_surveystart,ht_surveyfinish,ht_surveyexpiresat,ht_surveyproductssnapshotjson,ht_surveyselectionsnapshotjson,ht_surveytokenid,ht_surveyrecipientemail,versionnumber,_ht_region_value`
     );
     return mapOpportunitySession(row);
   }
@@ -621,9 +619,7 @@ function mapOpportunitySession(row: Record<string, unknown>): SurveySession {
     scheduledEnd: String(row.ht_surveyfinish ?? ""),
     expiresAt: String(row.ht_surveyexpiresat ?? ""),
     status: String(row.ht_surveyautomationstatuskey ?? "draft") as SurveySessionStatus,
-    allowedProductIds: splitIds(row.ht_surveyallowedproductids),
     productsSnapshot: parseProductSnapshot(row.ht_surveyproductssnapshotjson),
-    selectedProductIds: splitIds(row.ht_surveyselectedproductids),
     selectionSnapshot: parseSelectionSnapshot(row.ht_surveyselectionsnapshotjson),
     tokenId: String(row.ht_surveytokenid ?? ""),
     version: Number(row.versionnumber ?? 1)
@@ -744,9 +740,6 @@ function enquiryOpportunityBackfill(
 function dateOnlyOrUndefined(value: unknown): string | undefined {
   const result = stringOrUndefined(value);
   return result?.slice(0, 10);
-}
-function splitIds(value: unknown): string[] {
-  return String(value ?? "").split(",").map(item => item.trim()).filter(Boolean);
 }
 function parseProductSnapshot(value: unknown): ProductOption[] {
   if (!value) return [];

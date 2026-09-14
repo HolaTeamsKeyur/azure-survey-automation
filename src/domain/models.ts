@@ -97,9 +97,7 @@ export interface SurveySession {
   scheduledEnd: string;
   expiresAt: string;
   status: SurveySessionStatus;
-  allowedProductIds: string[];
   productsSnapshot: ProductOption[];
-  selectedProductIds: string[];
   selectionSnapshot: SurveyProductSelectionSnapshot[];
   tokenId: string;
   version: number;

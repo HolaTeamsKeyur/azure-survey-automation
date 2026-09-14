@@ -48,16 +48,10 @@ Open **Objects** > **Tables** > **Opportunity** > **Schema** > **Columns**. For 
 | Survey Recipient Email | `ht_SurveyRecipientEmail` | Text; format Email; 200 characters | Yes | Visible, read-only |
 | Survey Response Expires At | `ht_SurveyExpiresAt` | Date and time; Time-zone independent | Yes | Visible, read-only |
 | Survey Token ID | `ht_SurveyTokenId` | Text; 100 characters | Yes | Never put on the normal form; secure |
-| Survey Allowed Product IDs | `ht_SurveyAllowedProductIds` | Multiline text; 100,000 characters | No | Never put on the normal form; secure |
 | Survey Products Snapshot | `ht_SurveyProductsSnapshotJson` | Multiline text; 1,000,000 characters | No | Never put on the normal form; secure |
-| Survey Selected Product IDs | `ht_SurveySelectedProductIds` | Multiline text; 100,000 characters | Yes | Visible, read-only |
 | Survey Selection Snapshot | `ht_SurveySelectionSnapshotJson` | Multiline text; 1,000,000 characters | Yes | Admin only; secure |
 | Survey Product Review Status | `ht_SurveyProductReviewStatusKey` | Text; 30 characters | Yes | Visible, read-only |
-| Survey Response Reason | `ht_SurveyResponseReason` | Multiline text; 4,000 characters | Yes | Visible, read-only |
-| Survey Feedback Score | `ht_SurveyFeedbackScore` | Whole number; minimum 1; maximum 5 | Yes | Visible, read-only |
-| Survey Feedback Comments | `ht_SurveyFeedbackComments` | Multiline text; 4,000 characters | Yes | Visible, read-only |
 | Survey Responded On | `ht_SurveyRespondedOn` | Date and time; User local | Yes | Visible, read-only |
-| Survey Document Reference | `ht_SurveyDocumentReference` | Text; 500 characters | Yes | Visible, read-only; secure |
 | Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiline text; 4,000 characters | Yes | Visible and locked in Survey Automation |
 
 Create these additional **Opportunity** columns for the actual Survey and Quotation Form. They store the form shown in the existing Access4Lofts template:
@@ -163,15 +157,10 @@ The Opportunity contains sales and survey context but no product lines. Staff re
    - Survey Response Expires At
    - Survey Responded On
    - Survey Product Review Status
-   - Survey Selected Product IDs
-   - Survey Response Reason
-   - Survey Feedback Score
-   - Survey Feedback Comments
-   - Survey Document Reference
    - Survey Automation Last Error
 5. Select each control and enable its read-only/locked property. This is user-interface protection only; section 11 provides real column security.
 6. Keep the section collapsed by default if the normal sales form is already crowded.
-7. Do not add Token ID, Allowed Product IDs, Products Snapshot or Selection Snapshot to the normal sales form. Keep Last Error visible but locked in this internal Survey Automation section.
+7. Do not add Token ID, Products Snapshot or Selection Snapshot to the normal sales form. Keep Last Error visible but locked in this internal Survey Automation section.
 8. Do not add an Opportunity Products review subgrid for this workflow. Add the related Quotes subgrid and review lines from the Quote Product form.
 9. Select **Save and publish**.
 

@@ -13,7 +13,7 @@ const opportunity: OpportunityContext = {
   customer: { contactId: "66666666-6666-4666-8666-666666666666", name: "Customer", email: "customer@example.test" },
   region: { id: "77777777-7777-4777-8777-777777777777", name: "Brighton", senderMailbox: "office@example.test", surveyorMailbox: "surveyor@example.test", surveyorName: "Alex Surveyor", timeZone: "Europe/London", surveyDurationMinutes: 60, businessDayStartHour: 9, businessDayEndHour: 17, autoScheduleEnabled: false }
 };
-const session: SurveySession = { id: opportunity.opportunityId, opportunityId: opportunity.opportunityId, recipientEmail: "surveyor@example.test", regionId: opportunity.region.id, scheduledStart: "2026-09-15T09:00:00Z", scheduledEnd: "2026-09-15T10:00:00Z", expiresAt: "2099-01-01T00:00:00Z", status: "sent", allowedProductIds: [product.productId], productsSnapshot: [product], selectedProductIds: [], selectionSnapshot: [], tokenId: "token-id", version: 1 };
+const session: SurveySession = { id: opportunity.opportunityId, opportunityId: opportunity.opportunityId, recipientEmail: "surveyor@example.test", regionId: opportunity.region.id, scheduledStart: "2026-09-15T09:00:00Z", scheduledEnd: "2026-09-15T10:00:00Z", expiresAt: "2099-01-01T00:00:00Z", status: "sent", productsSnapshot: [product], selectionSnapshot: [], tokenId: "token-id", version: 1 };
 
 function config(extra: Record<string, string> = {}) { return loadConfig({ DATAVERSE_URL: "https://example.crm.dynamics.com", GRAPH_SENDER_MAILBOX: "office@example.test", PUBLIC_BASE_URL: "https://example.azurestaticapps.net", SURVEY_TOKEN_SECRET: "12345678901234567890123456789012", AUTOMATION_INGRESS_KEY: "123456789012345678901234", SEND_SURVEY_EMAIL: "false", ...extra }); }
 
@@ -90,7 +90,7 @@ test("submission clears Opportunity Products and sends selections only to the Qu
   );
   assert.equal(opportunityProductsCleared, true);
   assert.equal((quoteSelection as Array<{ productId: string }>)[0].productId, product.productId);
-  assert.equal(savedPatch.ht_surveyselectedproductids, product.productId);
+  assert.equal(savedPatch.ht_surveyselectedproductids, undefined);
   assert.equal(savedPatch.ht_surveypropertytype, "Semi-detached");
   assert.equal(savedPatch.ht_surveyautomationlasterror, null);
   assert.equal(result.quoteId, "99999999-9999-4999-8999-999999999999");

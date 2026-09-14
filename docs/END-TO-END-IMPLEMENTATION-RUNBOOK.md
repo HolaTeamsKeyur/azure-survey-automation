@@ -144,16 +144,10 @@ Before creating a column, search by both display name and logical name and reuse
 | Survey Recipient Email | `ht_SurveyRecipientEmail` | Email 200 | Send-time snapshot | Read-only |
 | Survey Response Expires At | `ht_SurveyExpiresAt` | Date/time | Time-zone independent | Read-only |
 | Survey Token ID | `ht_SurveyTokenId` | Text 100 | Random ID; never store signed token | Hidden |
-| Survey Allowed Product IDs | `ht_SurveyAllowedProductIds` | Multiline 100,000 | Immutable validation list | Hidden |
 | Survey Products Snapshot | `ht_SurveyProductsSnapshotJson` | Multiline 1,000,000 | Send-time names, units and prices | Hidden |
-| Survey Selected Product IDs | `ht_SurveySelectedProductIds` | Multiline 100,000 | Compatibility/search value | Read-only |
 | Survey Selection Snapshot | `ht_SurveySelectionSnapshotJson` | Multiline 1,000,000 | Selected IDs, quantities, unit prices and notes | Hidden/admin |
 | Survey Product Review Status | `ht_SurveyProductReviewStatusKey` | Text 30 | `not_received`, `pending_review`, `reviewed`, `rejected` | Read-only |
-| Survey Response Reason | `ht_SurveyResponseReason` | Multiline 4,000 | Decline/reschedule note | Read-only |
-| Survey Feedback Score | `ht_SurveyFeedbackScore` | Whole number | Minimum 1, maximum 5 | Read-only |
-| Survey Feedback Comments | `ht_SurveyFeedbackComments` | Multiline 4,000 | Customer feedback | Read-only |
 | Survey Responded On | `ht_SurveyRespondedOn` | Date/time | User local | Read-only |
-| Survey Document Reference | `ht_SurveyDocumentReference` | Text 500 | Optional private document/blob reference | Read-only |
 | Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiline 4,000 | Timestamp, reference ID and processing error; cleared after success | Internal read-only |
 
 The current code expects the status key as text. Changing it to a Dataverse Choice is a valid later hardening change, but requires mapping numeric values in the API first.
@@ -203,7 +197,7 @@ Add only if Operations needs to distinguish customer requests from staff-entered
 ## 6. Security, auditing and ownership
 
 1. Enable auditing on request timestamps, recipient, status, expiry, selected products, reasons and response timestamps.
-2. Apply field security to token ID, allowed IDs, JSON snapshots and document reference. Show Last Error read-only to internal users in Survey Automation.
+2. Apply field security to token ID and JSON snapshots. Show Last Error read-only to internal users in Survey Automation.
 3. Normal sales users receive read access to automation status and response fields, but not token/snapshot fields.
 4. The Dataverse application user receives:
    - Read: Contact, Region, Account, Product, Unit, Price List and Price List Item.
@@ -253,14 +247,10 @@ Failure to resolve exactly one approved Price List stops the send and records a 
    - Survey Send Requested On
    - Survey Recipient Email
    - Survey Response Expires At
-   - Survey Selected Product IDs
    - Survey Product Review Status
-   - Survey Response Reason
-   - Survey Feedback Score
-   - Survey Feedback Comments
    - Survey Responded On
    - Survey Automation Last Error
-3. Keep token ID, allowed IDs and JSON snapshots off the normal form. Keep Last Error visible but locked in the internal automation section.
+3. Keep token ID and JSON snapshots off the normal form. Keep Last Error visible but locked in the internal automation section.
 4. Do not add an Opportunity Products subgrid for this workflow. Add the related Quotes subgrid and review products inside the draft Quote.
 5. Create a Quote Product view **Customer-requested products pending review** if the optional audit columns are used.
 6. Publish and test with Sales and Surveyor personas, not only System Administrator.

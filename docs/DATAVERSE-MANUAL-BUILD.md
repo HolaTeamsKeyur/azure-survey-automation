@@ -22,12 +22,7 @@ Do not add all table assets. Use **Add existing > Table > Select components** an
 | Survey Recipient Email | `ht_SurveyRecipientEmail` | Email | 200 | Read-only |
 | Survey Response Expires At | `ht_SurveyExpiresAt` | Date and time | Time-zone independent | Read-only |
 | Survey Token ID | `ht_SurveyTokenId` | Single line text | 100 | Do not place on normal user form |
-| Survey Allowed Product IDs | `ht_SurveyAllowedProductIds` | Multiple lines text | 100,000 | Hidden/read-only |
 | Survey Products Snapshot | `ht_SurveyProductsSnapshotJson` | Multiple lines text | 1,000,000 | Hidden/read-only |
-| Survey Selected Product IDs | `ht_SurveySelectedProductIds` | Multiple lines text | 100,000 | Read-only |
-| Survey Response Reason | `ht_SurveyResponseReason` | Multiple lines text | 4,000 | Read-only |
-| Survey Feedback Score | `ht_SurveyFeedbackScore` | Whole number | Min 1, max 5 | Read-only |
-| Survey Feedback Comments | `ht_SurveyFeedbackComments` | Multiple lines text | 4,000 | Read-only |
 | Survey Responded On | `ht_SurveyRespondedOn` | Date and time | User local | Read-only |
 | Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiple lines text | 4,000 | Survey Automation section, read-only |
 
@@ -74,13 +69,10 @@ Add a collapsed section named **Customer Survey Automation** below the existing 
 1. Survey Automation Status
 2. Survey Recipient Email
 3. Survey Response Expires At
-4. Survey Selected Product IDs
-5. Survey Response Reason
-6. Survey Feedback Score
-7. Survey Feedback Comments
-8. Survey Responded On
+4. Survey Responded On
+5. Survey Automation Last Error
 
-Keep all fields read-only for ordinary sales users. Do not display token ID, allowed IDs or snapshot JSON on the normal form. Display Last Error only in the internal Survey Automation section.
+Keep all fields read-only for ordinary sales users. Do not display token ID or snapshot JSON on the normal form. Display Last Error only in the internal Survey Automation section.
 
 ### Order Confirmation form
 
