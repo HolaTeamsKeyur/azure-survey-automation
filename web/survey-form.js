@@ -1,6 +1,25 @@
 (() => {
   const money = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" });
   const rows = [...document.querySelectorAll(".product-row")];
+  const search = document.querySelector("#product-search");
+  const resultCount = document.querySelector("#product-result-count");
+  const noResults = document.querySelector("#no-product-results");
+
+  const refreshSearch = () => {
+    const query = search?.value.trim().toLowerCase() ?? "";
+    let matches = 0;
+    rows.forEach(row => {
+      const visible = !query || row.dataset.productSearch.includes(query);
+      row.hidden = !visible;
+      if (visible) matches++;
+    });
+    if (resultCount) {
+      resultCount.textContent = query
+        ? `${matches} product${matches === 1 ? "" : "s"} found`
+        : `Showing all ${rows.length} products`;
+    }
+    if (noResults) noResults.hidden = matches !== 0;
+  };
 
   const refreshTotals = () => {
     let subtotal = 0;
@@ -33,6 +52,7 @@
     row.querySelector("input[type=checkbox]").addEventListener("change", refreshTotals);
     row.querySelector(".quantity input").addEventListener("input", refreshTotals);
   });
+  search?.addEventListener("input", refreshSearch);
 
   document.querySelectorAll("textarea").forEach(textarea => {
     const resize = () => {
@@ -55,4 +75,5 @@
   });
 
   refreshTotals();
+  refreshSearch();
 })();

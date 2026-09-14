@@ -27,6 +27,8 @@ test("renders the surveyor-facing property workflow without demo content", () =>
   assert.match(html, /Loft boarding/);
   assert.match(html, /name="selected_44444444-4444-4444-8444-444444444444"/);
   assert.match(html, /name="quantity_44444444-4444-4444-8444-444444444444"/);
+  assert.match(html, /id="product-search"/);
+  assert.match(html, /data-product-search="loft boarding"/);
   assert.match(html, /from this Opportunity's Price List/);
   assert.doesNotMatch(html, /Request a product/);
   assert.doesNotMatch(html, /mock mode|control room|sample record|Adaptive Card|customer enquiry form/i);
@@ -53,7 +55,9 @@ test("shows every Opportunity Price List product in one scrollable form", () => 
     products
   });
   assert.match(html, /Showing 12 survey-enabled products/);
-  assert.doesNotMatch(html, /Show all products|product-search| hidden/);
+  assert.match(html, /placeholder="Search by product name or description"/);
+  assert.doesNotMatch(html, /Show all products/);
   assert.equal((html.match(/class="product-row/g) ?? []).length, 12);
   assert.match(html, /\.field-list\{display:flex;flex-direction:column/);
+  assert.match(html, /\.product-row\{display:grid;grid-template-columns:minmax\(0,1fr\) 150px 105px/);
 });
