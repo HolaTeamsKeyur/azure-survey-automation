@@ -27,7 +27,9 @@ Rotate the previously used client secret before production and store only the ne
 
 Keep `a4l-survey-dev` on Azure Static Web Apps Free and use its preconfigured Microsoft Entra provider. No second app registration or surveyor-portal client secret is required.
 
-The email link first opens `/.auth/login/aad` and returns to the signed survey URL. Although the Free provider can display sign-in for Microsoft accounts outside HolaTeams, the API validates a signed survey token and the HolaTeams Entra tenant ID from `AZURE_TENANT_ID`. With `SURVEYOR_ACCESS_MODE=tenant`, any authenticated HolaTeams employee who receives the signed link can complete it; external Microsoft accounts remain blocked. Set the mode to `assigned` only when every survey is sent to an individually sign-in-capable surveyor mailbox.
+The email link first opens `/.auth/login/aad` and returns to the permanent `/api/survey/opportunity/{opportunity-guid}` route. The GUID is only a stable locator. The API validates the HolaTeams Entra tenant ID from `AZURE_TENANT_ID` and then generates a short-lived signed submission token behind the page. With `SURVEYOR_ACCESS_MODE=tenant`, any authenticated HolaTeams employee who receives the link can complete it; external Microsoft accounts remain blocked. Set the mode to `assigned` only when every survey is sent to an individually sign-in-capable surveyor mailbox.
+
+The form submits through a same-page background request. If Dataverse or Quote creation fails, the page remains open, the fields stay populated, and a retryable message with a correlation reference is shown. Same-tab browser refresh restores an unsaved draft. After success, the stable GUID URL shows the completed confirmation on every refresh.
 
 This keeps hosting free during development and UAT. A separate single-tenant custom provider remains an optional Standard-plan hardening step before a future production SLA decision; it is not required for the current build.
 
@@ -37,7 +39,7 @@ Create/adjust one custom role named `A4L Survey Automation Service` and assign i
 
 Minimum privileges:
 
-- Organisation read: Account, Contact, Product, Unit, Price List, Price List Item, Transaction Currency, System User.
+- Organisation read: Lead/Enquiry, Account, Contact, Product, Unit, Price List, Price List Item, Transaction Currency, System User.
 - Organisation read/write: Opportunity.
 - Organisation create/read/write/delete: Opportunity Product and Quote Product. Organisation create/read/write: Quote and Survey Product Request.
 - Organisation read: Region and Survey Template custom tables.
@@ -112,6 +114,25 @@ Add the table to the `Survey Configuration` area. Create one default active reco
 A Region-specific active template overrides the default. Administrators can safely reorder, rename, show or hide known sections; arbitrary HTML or JavaScript is never accepted. Keep `review` present. This is the supported layout configuration point; a drag-and-drop designer can be added later without changing the data contract.
 
 ## 5. Opportunity and product catalogue
+
+### Enquiry qualification mappings
+
+Configure the standard Lead/Enquiry-to-Opportunity relationship mappings so qualification copies these existing fields before the survey is requested:
+
+| Enquiry source | Opportunity target |
+|---|---|
+| `ht_streetname` | `ht_streetname` |
+| `ht_propertypostcode` | `ht_propertypostcode` |
+| `ht_propertytype` | `ht_propertytype` |
+| `ht_propertyage` | `ht_propertyage` |
+| `ht_existinghatchtype` | `ht_existinghatchtype` |
+| `ht_loftboardingrequired` | `ht_loftboardingrequired` |
+| `ht_loftladderrequired` | `ht_loftladderrequired` |
+| `ht_lightrequired` | `ht_lightrequired` |
+| `ht_insulationrequired` | `ht_insulationrequired` |
+| `leadsourcecode` | `leadsourcecode` |
+
+The API provides a second safety layer: when one of these Opportunity fields is blank, it reads the `originatingleadid` Enquiry, prefills the survey, and writes the missing source value plus its survey-text equivalent onto the Opportunity. Existing Opportunity values always win and are never overwritten.
 
 On the Opportunity main form require:
 
@@ -192,7 +213,7 @@ Keep the existing Dataverse URL, public base URL and token/ingress secrets. Rota
 2. Set Contact, Region, Surveyor, survey dates and resolved Price List.
 3. Trigger Flow 1. Confirm the email goes to the Surveyor, never the Contact.
 4. Open in a private browser. Sign in as a different tenant/user and confirm access is denied; sign in as the assigned surveyor and confirm access.
-5. Confirm customer, address and appointment are prefilled, and only flagged Products from the Opportunity Price List are shown.
+5. Confirm customer, address, property type/age, hatch and requirement fields are prefilled from the Enquiry, and only flagged Products from the Opportunity Price List are shown.
 6. Submit catalogue products only. Confirm the Opportunity Products and draft Quote Products contain exactly the selected rows; confirm a previously unselected line is removed.
 7. Repeat with a new Opportunity and add a non-catalogue request. Confirm Opportunity Products are saved, a pending Survey Product Request is created, and no Quote exists.
 8. Map and approve the request. Confirm the approval flow adds the line once and creates one Quote.

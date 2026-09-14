@@ -19,12 +19,13 @@ Do not perform these steps in Access4Lofts production. Menu wording can vary sli
 Inside **HolaTeams Survey Automation Demo**:
 
 1. Select **Add existing** > **Table**.
-2. Select **Opportunity** and choose **Edit objects**.
-3. Add only the main form that will be edited. Do not select **Include all objects**.
-4. Repeat for **Order**. Its Dataverse logical name is `salesorder`; the visible label may be **Order** or **Order Confirmation**.
-5. Repeat for **Price List Item**. Its logical name is `productpricelevel`.
-6. Add **Opportunity Product** only if you are implementing the optional line-review columns in section 6.
-7. Select **Add** and wait for the components to appear in the solution.
+2. Add **Lead** (displayed as **Enquiry** in HolaSales) and its relationship to Opportunity.
+3. Select **Opportunity** and choose **Edit objects**.
+4. Add only the main form that will be edited. Do not select **Include all objects**.
+5. Repeat for **Order**. Its Dataverse logical name is `salesorder`; the visible label may be **Order** or **Order Confirmation**.
+6. Repeat for **Price List Item**. Its logical name is `productpricelevel`.
+7. Add **Opportunity Product** only if you are implementing the optional line-review columns in section 6.
+8. Select **Add** and wait for the components to appear in the solution.
 
 Create every new column from this solution, not from an unmanaged default solution.
 
@@ -90,6 +91,17 @@ Create these additional **Opportunity** columns for the actual Survey and Quotat
 Keep these optional and enable auditing. Add the business-facing fields to a **Survey Details** section on the Opportunity form; do not add token/snapshot fields there.
 
 After saving, open each column once and verify its lower-case logical name matches the equivalent name in `assets/DATAVERSE-FIELDS.csv`. Once a schema name is committed, do not delete and recreate it casually; integrations depend on the logical name.
+
+### 3A. Map Enquiry fields during qualification
+
+1. Open **Tables > Lead (Enquiry) > Relationships**.
+2. Open the relationship that creates the originating Opportunity (normally `opportunity_originating_lead`). If the modern designer does not expose mappings, choose **Switch to classic** for this relationship.
+3. Open **Mappings** and add these source-to-target pairs: `ht_streetname`, `ht_propertypostcode`, `ht_propertytype`, `ht_propertyage`, `ht_existinghatchtype`, `ht_loftboardingrequired`, `ht_loftladderrequired`, `ht_lightrequired`, `ht_insulationrequired`, and `leadsourcecode`; each maps to the same logical name on Opportunity.
+4. Confirm each pair has a compatible data type. Do not map a Choice directly into a Text field.
+5. Save and publish all customisations.
+6. Qualify a new disposable Enquiry and verify the values appear on its Opportunity before requesting the survey.
+
+The Azure API also reads `originatingleadid` when any supported Opportunity value is blank. It fills the survey and backfills only missing Opportunity values; it never replaces a value already changed on the Opportunity.
 
 ## 4. Create the Order columns
 
@@ -348,9 +360,9 @@ Do not let the old automation and this webhook own the same event. Record which 
 4. Select **Send Customer Survey** once.
 5. Verify `Survey Send Requested On` changes.
 6. After the webhook is live, verify status progresses to `sent` or the admin error field records a controlled failure.
-7. Open the signed browser link in a private browser.
+7. Open the returned permanent Opportunity GUID browser link in a private browser and complete Microsoft sign-in.
 8. Verify only products from the resolved regional Price List appear.
-9. Submit accept, decline and reschedule test cases; verify each is idempotent and expired/tampered tokens fail.
+9. Refresh before submission and verify the draft is restored; submit and verify the permanent link consistently shows the completed result. Also verify unauthorized users and tampered GUIDs fail.
 10. Verify an accepted product selection is stored with status `pending_review` and does not silently create an approved quote.
 11. Repeat on Order with valid installation dates.
 12. Verify a reschedule response records the reason but does not change dates automatically.

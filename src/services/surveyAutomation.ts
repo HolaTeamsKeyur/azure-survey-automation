@@ -7,7 +7,7 @@ import { DataverseClient } from "../infrastructure/dataverse.js";
 import { SurveyDocumentService } from "../infrastructure/documents.js";
 import { GraphClient, type MailAttachment } from "../infrastructure/graph.js";
 import { issueSurveyToken, type SurveyTokenClaims } from "../security/tokens.js";
-import { surveyorLoginUrl } from "../security/clientPrincipal.js";
+import { surveyorOpportunityUrl } from "../security/clientPrincipal.js";
 import { defaultSurveyLayout } from "../domain/surveyLayout.js";
 
 export class SurveyAutomationService {
@@ -92,7 +92,7 @@ export class SurveyAutomationService {
         recipientHash: hashEmail(session.recipientEmail)
       };
       const token = await issueSurveyToken(this.config, claims);
-      const formUrl = buildSurveyFormUrl(this.config, token);
+      const formUrl = buildSurveyFormUrl(this.config, token, context.opportunityId);
       const attachments: MailAttachment[] = [];
       if (this.config.enableWordDocument) {
         if (!this.documents) throw new Error("Word document generation is enabled but template storage is not configured.");
@@ -229,6 +229,32 @@ export class SurveyAutomationService {
     return { session, context, products: session.productsSnapshot, layout };
   }
 
+  async getSurveyFormByOpportunityId(opportunityId: string): Promise<{
+    session: Awaited<ReturnType<DataverseClient["getSession"]>>;
+    context: Awaited<ReturnType<DataverseClient["getOpportunityContext"]>>;
+    products: ProductOption[];
+    layout: typeof defaultSurveyLayout;
+    token: string;
+  }> {
+    const session = await this.dataverse.getSession(opportunityId);
+    const context = await this.dataverse.getOpportunityContext(session.opportunityId);
+    const layout = this.config.enableDataverseSurveyLayout
+      ? await this.dataverse.getSurveyLayout(context.region.id) ?? defaultSurveyLayout
+      : defaultSurveyLayout;
+    const token = await issueSurveyToken(this.config, {
+      sessionId: session.id,
+      tokenId: session.tokenId,
+      recipientHash: hashEmail(session.recipientEmail)
+    });
+    return { session, context, products: session.productsSnapshot, layout, token };
+  }
+
+  async renewOpenSurveySession(sessionId: string): Promise<void> {
+    await this.dataverse.updateSession(sessionId, {
+      ht_surveyexpiresat: new Date(Date.now() + 14 * 86_400_000).toISOString()
+    });
+  }
+
   parseProductSelection(value: string | undefined): string[] {
     return splitProductIds(value);
   }
@@ -244,16 +270,16 @@ function surveyRequestResult(
   return {
     sessionId,
     reused,
-    formUrl: buildSurveyFormUrl(config, token),
+    formUrl: buildSurveyFormUrl(config, token, context.opportunityId),
     recipientEmail: context.region.surveyorMailbox!,
     recipientName: context.region.surveyorName ?? context.region.surveyorMailbox!,
     subject: `Survey assigned - ${context.name}`
   };
 }
 
-function buildSurveyFormUrl(config: AppConfig, token: string): string {
+function buildSurveyFormUrl(config: AppConfig, token: string, opportunityId: string): string {
   return config.requireSurveyorAuth
-    ? surveyorLoginUrl(config.publicBaseUrl, token)
+    ? surveyorOpportunityUrl(config.publicBaseUrl, opportunityId)
     : `${config.publicBaseUrl}/api/survey/${encodeURIComponent(token)}`;
 }
 

@@ -84,8 +84,9 @@ This uses standard catalogue tables already present in Dynamics. VAT remains exc
 
 ## Security model
 
-- Each public URL contains a short-lived signed token containing Opportunity/Order ID, token ID and recipient hash.
-- The signed token itself is never stored.
+- The internal survey email uses a stable Opportunity GUID URL protected by Entra tenant and surveyor authorization; the GUID alone grants no access.
+- The survey page generates a short-lived signed submission token containing Opportunity ID, token ID and recipient hash. Installation confirmation links continue to carry their own signed token.
+- Signed tokens are never stored.
 - Submitted product IDs must exist in the immutable Opportunity snapshot.
 - Outlook callbacks additionally validate the Microsoft Entra Actionable Messages token.
 - HTTPS, CSP, no-store responses and rate limiting are required.

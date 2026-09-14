@@ -1,5 +1,6 @@
 import type { HttpRequest } from "@azure/functions";
 import type { AppConfig } from "../config.js";
+import { normalizeGuid } from "../domain/rules.js";
 
 interface ClientPrincipalClaim { typ: string; val: string }
 
@@ -51,6 +52,19 @@ export function assertSurveyorAccess(config: AppConfig, principal: ClientPrincip
 
 export function surveyorLoginUrl(publicBaseUrl: string, token: string): string {
   const returnPath = `/api/survey/${encodeURIComponent(token)}`;
+  return loginUrl(publicBaseUrl, returnPath);
+}
+
+export function surveyorOpportunityUrl(publicBaseUrl: string, opportunityId: string): string {
+  return `${publicBaseUrl}/api/survey/opportunity/${normalizeGuid(opportunityId)}`;
+}
+
+export function surveyorOpportunityLoginUrl(publicBaseUrl: string, opportunityId: string): string {
+  const returnPath = `/api/survey/opportunity/${normalizeGuid(opportunityId)}`;
+  return loginUrl(publicBaseUrl, returnPath);
+}
+
+function loginUrl(publicBaseUrl: string, returnPath: string): string {
   return `${publicBaseUrl}/.auth/login/aad?post_login_redirect_uri=${encodeURIComponent(returnPath)}`;
 }
 

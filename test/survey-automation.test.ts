@@ -5,6 +5,7 @@ import type { OpportunityContext, SurveySession } from "../src/domain/models.js"
 import type { DataverseClient } from "../src/infrastructure/dataverse.js";
 import type { GraphClient } from "../src/infrastructure/graph.js";
 import { hashEmail, SurveyAutomationService } from "../src/services/surveyAutomation.js";
+import { verifySurveyToken } from "../src/security/tokens.js";
 
 const product = { productId: "44444444-4444-4444-8444-444444444444", unitId: "55555555-5555-4555-8555-555555555555", name: "Boarding", quantity: 1, price: 60, selectedByDefault: false, sortOrder: 1 };
 const opportunity: OpportunityContext = {
@@ -21,7 +22,25 @@ test("reused survey links remain addressed to the assigned surveyor", async () =
   const result = await new SurveyAutomationService(config(), dataverse, {} as GraphClient).requestSurvey(opportunity.opportunityId);
   assert.equal(result.recipientEmail, "surveyor@example.test");
   assert.equal(result.recipientName, "Alex Surveyor");
-  assert.match(result.formUrl, /\.auth\/login\/aad/);
+  assert.equal(result.formUrl, `https://example.azurestaticapps.net/api/survey/opportunity/${opportunity.opportunityId}`);
+  assert.doesNotMatch(result.formUrl, /signed|token-id/);
+});
+
+test("the permanent Opportunity route can mint a fresh internal submission token", async () => {
+  let renewal: Record<string, unknown> = {};
+  const dataverse = {
+    getSession: async () => session,
+    getOpportunityContext: async () => opportunity,
+    updateSession: async (_id: string, patch: Record<string, unknown>) => { renewal = patch; }
+  } as unknown as DataverseClient;
+  const appConfig = config();
+  const service = new SurveyAutomationService(appConfig, dataverse, {} as GraphClient);
+  const model = await service.getSurveyFormByOpportunityId(opportunity.opportunityId);
+  const claims = await verifySurveyToken(appConfig, model.token);
+  assert.equal(claims.sessionId, session.id);
+  assert.equal(claims.tokenId, session.tokenId);
+  await service.renewOpenSurveySession(session.id);
+  assert.ok(new Date(String(renewal.ht_surveyexpiresat)) > new Date());
 });
 
 test("a non-catalogue request blocks quote creation until approval", async () => {

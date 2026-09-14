@@ -4,7 +4,7 @@ import { correlationId, publicFormErrorMessage } from "../http/responses.js";
 import { verifySurveyToken } from "../security/tokens.js";
 import { SurveyAutomationService } from "../services/surveyAutomation.js";
 import { renderSurveyForm, renderSurveyThanks, surveyPageHeaders } from "../views/surveyPage.js";
-import { assertSurveyorAccess, readClientPrincipal, SurveyorAccessError, surveyorLoginUrl } from "../security/clientPrincipal.js";
+import { assertSurveyorAccess, readClientPrincipal, SurveyorAccessError, surveyorLoginUrl, surveyorOpportunityUrl } from "../security/clientPrincipal.js";
 import type { NewProductRequest } from "../domain/models.js";
 
 async function handler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -21,7 +21,10 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
     const model = await service.getSurveyForm(claims);
     assertSurveyorAccess(config, principal, model.session.recipientEmail);
     if (request.method === "GET") {
-      return { status: 200, headers: surveyPageHeaders(requestId), body: renderSurveyForm({ token, context: model.context, scheduledStart: model.session.scheduledStart, products: model.products, layout: model.layout, enableNewProductRequests: config.enableNewProductRequests }) };
+      if (["accepted", "declined", "reschedule_requested"].includes(model.session.status)) {
+        return { status: 200, headers: surveyPageHeaders(requestId), body: renderSurveyThanks(model.session.selectionSnapshot.length) };
+      }
+      return { status: 200, headers: surveyPageHeaders(requestId), body: renderSurveyForm({ token, draftId: model.session.tokenId, context: model.context, scheduledStart: model.session.scheduledStart, products: model.products, layout: model.layout, enableNewProductRequests: config.enableNewProductRequests }) };
     }
 
     const form = await request.formData();
@@ -43,9 +46,26 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
       },
       newProductRequests: readNewProductRequests(form)
     }, claims);
-    return { status: 200, headers: surveyPageHeaders(requestId), body: renderSurveyThanks(result.productCount, result.requestedProductCount, result.quoteId) };
+    const nextUrl = config.requireSurveyorAuth
+      ? surveyorOpportunityUrl(config.publicBaseUrl, model.context.opportunityId)
+      : `${config.publicBaseUrl}/api/survey/${encodeURIComponent(token)}`;
+    if (wantsJson(request)) {
+      return { status: 200, headers: jsonHeaders(requestId), jsonBody: { ...result, nextUrl } };
+    }
+    return { status: 303, headers: { ...surveyPageHeaders(requestId), "Location": nextUrl }, body: renderSurveyThanks(result.productCount, result.requestedProductCount, result.quoteId) };
   } catch (error) {
     context.error(`Survey form request failed. Correlation ID: ${requestId}`, error);
+    if (wantsJson(request)) {
+      const status = error instanceof SurveyorAccessError ? 403 : 400;
+      return {
+        status,
+        headers: jsonHeaders(requestId),
+        jsonBody: {
+          error: error instanceof SurveyorAccessError ? error.message : "The survey could not be saved.",
+          correlationId: requestId
+        }
+      };
+    }
     if (error instanceof SurveyorAccessError) {
       return { status: 403, headers: surveyPageHeaders(requestId), body: accessDeniedPage(error.message) };
     }
@@ -82,3 +102,5 @@ function readNewProductRequests(form: FormData): NewProductRequest[] {
 function errorPage(message: string): string { return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Unable to continue</title><style>body{font-family:Arial,sans-serif;max-width:700px;margin:10vh auto;padding:2rem}h1{color:#0969ad}</style></head><body><h1>Unable to continue</h1><p>${escapeHtml(message)}</p><p>Please contact your local Access4Lofts team.</p></body></html>`; }
 function accessDeniedPage(message: string): string { return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Access denied</title><style>body{font-family:Arial,sans-serif;max-width:700px;margin:10vh auto;padding:2rem}h1{color:#0969ad}a{color:#0969ad}</style></head><body><h1>Access denied</h1><p>${escapeHtml(message)}</p><p>Sign in with an authorised HolaTeams Microsoft 365 account, or contact the Access4Lofts office.</p><p><a href="/.auth/logout?post_logout_redirect_uri=/">Sign out and use another account</a></p></body></html>`; }
 function escapeHtml(value: string): string { return value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!); }
+function wantsJson(request: HttpRequest): boolean { return request.headers.get("accept")?.includes("application/json") ?? false; }
+function jsonHeaders(requestId: string): Record<string, string> { return { "Cache-Control": "no-store", "Content-Type": "application/json; charset=utf-8", "x-correlation-id": requestId }; }

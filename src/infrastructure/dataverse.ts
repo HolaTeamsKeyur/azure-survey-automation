@@ -6,6 +6,7 @@ import type {
   NewProductRequest,
   OpportunityContext,
   ProductOption,
+  SurveyDetails,
   SurveyProductSelectionSnapshot,
   SurveySession,
   SurveySessionStatus
@@ -113,7 +114,7 @@ export class DataverseClient {
       .filter(name => availableSurveyColumns.has(name))
       .join(",");
     const row = await this.request<Record<string, unknown>>(
-      `opportunities(${id})?$select=opportunityid,name,ht_propertypostcode,ht_streetname,ht_surveystart,ht_surveyfinish,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_transactioncurrencyid_value,_ht_surveyor_value,` +
+      `opportunities(${id})?$select=opportunityid,name,ht_propertypostcode,ht_streetname,ht_surveystart,ht_surveyfinish,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_transactioncurrencyid_value,_ht_surveyor_value,_originatingleadid_value,leadsourcecode,` +
       `ht_propertytype,ht_propertyage,ht_existinghatchtype,ht_loftboardingrequired,ht_loftladderrequired,ht_lightrequired,ht_insulationrequired` +
       `${optionalSelect ? `,${optionalSelect}` : ""}&` +
       `$expand=parentcontactid($select=contactid,fullname,emailaddress1,mobilephone),ht_Region($select=ht_regionid,ht_name,ht_regioncode,ht_email,ht_telephone,_ht_franchise_value)`
@@ -122,6 +123,13 @@ export class DataverseClient {
     const region = row.ht_Region as Record<string, unknown> | undefined;
     if (!contact?.contactid || !contact.emailaddress1) throw new Error("Opportunity requires a Contact with an email address.");
     if (!region?.ht_regionid) throw new Error("Opportunity requires a Region.");
+
+    const originatingLeadId = stringOrUndefined(row._originatingleadid_value);
+    const enquiry = originatingLeadId
+      ? await this.request<Record<string, unknown>>(
+        `leads(${normalizeGuid(originatingLeadId)})?$select=leadid,address1_line1,address1_line2,address1_line3,address1_city,address1_postalcode,description,leadsourcecode,ht_propertypostcode,ht_streetname,ht_propertytype,ht_propertyage,ht_existinghatchtype,ht_loftboardingrequired,ht_loftladderrequired,ht_lightrequired,ht_insulationrequired`
+      )
+      : undefined;
 
     const priceListId = stringOrUndefined(row._pricelevelid_value);
     const franchiseId = stringOrUndefined(region._ht_franchise_value);
@@ -141,41 +149,55 @@ export class DataverseClient {
       surveyorName = stringOrUndefined(surveyor.fullname);
     }
 
+    const streetName = stringOrUndefined(row.ht_streetname)
+      ?? stringOrUndefined(enquiry?.ht_streetname)
+      ?? enquiryAddress(enquiry);
+    const propertyPostcode = stringOrUndefined(row.ht_propertypostcode)
+      ?? stringOrUndefined(enquiry?.ht_propertypostcode)
+      ?? stringOrUndefined(enquiry?.address1_postalcode);
+    const surveyDetails: SurveyDetails = {
+      address: stringOrUndefined(row.ht_surveyaddress) ?? ([streetName, propertyPostcode].filter(Boolean).join(", ") || undefined),
+      propertyType: stringOrUndefined(row.ht_surveypropertytype) ?? formattedFrom(row, enquiry, "ht_propertytype"),
+      propertyAge: stringOrUndefined(row.ht_surveypropertyage) ?? formattedFrom(row, enquiry, "ht_propertyage"),
+      advertisingSource: stringOrUndefined(row.ht_surveyadvertisingsource) ?? formattedFrom(row, enquiry, "leadsourcecode"),
+      existingHatchType: stringOrUndefined(row.ht_surveyexistinghatchtype) ?? formattedFrom(row, enquiry, "ht_existinghatchtype"),
+      flooringRequired: stringOrUndefined(row.ht_surveyflooringrequired) ?? formattedBooleanFrom(row, enquiry, "ht_loftboardingrequired"),
+      ladderRequired: stringOrUndefined(row.ht_surveyladderrequired) ?? formattedBooleanFrom(row, enquiry, "ht_loftladderrequired"),
+      lightRequired: stringOrUndefined(row.ht_surveylightrequired) ?? formattedBooleanFrom(row, enquiry, "ht_lightrequired"),
+      insulationRequired: stringOrUndefined(row.ht_surveyinsulationrequired) ?? formattedBooleanFrom(row, enquiry, "ht_insulationrequired"),
+      otherInformation: stringOrUndefined(row.ht_surveyotherinformation) ?? stringOrUndefined(enquiry?.description),
+      quotationDate: dateOnlyOrUndefined(row.ht_quotationdate),
+      houseType: stringOrUndefined(row.ht_surveyhousetype),
+      roofType: stringOrUndefined(row.ht_surveyrooftype),
+      ceilingHeightCm: numberOrUndefined(row.ht_surveyceilingheightcm),
+      hatchTopWidthCm: numberOrUndefined(row.ht_surveyhatchtopwidthcm),
+      hatchTopLengthCm: numberOrUndefined(row.ht_surveyhatchtoplengthcm),
+      hatchInsideWidthCm: numberOrUndefined(row.ht_surveyhatchinsidewidthcm),
+      hatchInsideLengthCm: numberOrUndefined(row.ht_surveyhatchinsidelengthcm),
+      ladderClearanceWidthCm: numberOrUndefined(row.ht_surveyladderclearancewidthcm),
+      ladderArcClearanceCm: numberOrUndefined(row.ht_surveyladderarcclearancecm),
+      ladderArcType: stringOrUndefined(row.ht_surveyladderarctype),
+      planNotes: stringOrUndefined(row.ht_surveyplannotes),
+      additionalInfo: stringOrUndefined(row.ht_surveyadditionalinfo)
+    };
+    const enquiryBackfill = enquiryOpportunityBackfill(row, enquiry, streetName, propertyPostcode);
+    const surveyBackfill = opportunitySurveyBackfill(row, surveyDetails, availableSurveyColumns);
+    const opportunityBackfill = { ...enquiryBackfill, ...surveyBackfill };
+    if (Object.keys(opportunityBackfill).length) {
+      await this.request(`opportunities(${id})`, { method: "PATCH", body: JSON.stringify(opportunityBackfill) });
+    }
+
     return {
       opportunityId: id,
       name: String(row.name ?? "Survey"),
-      propertyPostcode: stringOrUndefined(row.ht_propertypostcode),
-      streetName: stringOrUndefined(row.ht_streetname),
+      propertyPostcode,
+      streetName,
       priceListId,
       currencyId: stringOrUndefined(row._transactioncurrencyid_value),
       surveyorUserId,
       scheduledStart: stringOrUndefined(row.ht_surveystart),
       scheduledEnd: stringOrUndefined(row.ht_surveyfinish),
-      surveyDetails: {
-        address: stringOrUndefined(row.ht_surveyaddress) ?? stringOrUndefined(row.ht_streetname),
-        propertyType: stringOrUndefined(row.ht_surveypropertytype) ?? formattedOrRaw(row, "ht_propertytype"),
-        propertyAge: stringOrUndefined(row.ht_surveypropertyage) ?? formattedOrRaw(row, "ht_propertyage"),
-        advertisingSource: stringOrUndefined(row.ht_surveyadvertisingsource),
-        existingHatchType: stringOrUndefined(row.ht_surveyexistinghatchtype) ?? formattedOrRaw(row, "ht_existinghatchtype"),
-        flooringRequired: stringOrUndefined(row.ht_surveyflooringrequired) ?? formattedOrBoolean(row, "ht_loftboardingrequired"),
-        ladderRequired: stringOrUndefined(row.ht_surveyladderrequired) ?? formattedOrBoolean(row, "ht_loftladderrequired"),
-        lightRequired: stringOrUndefined(row.ht_surveylightrequired) ?? formattedOrRaw(row, "ht_lightrequired"),
-        insulationRequired: stringOrUndefined(row.ht_surveyinsulationrequired) ?? formattedOrBoolean(row, "ht_insulationrequired"),
-        otherInformation: stringOrUndefined(row.ht_surveyotherinformation),
-        quotationDate: dateOnlyOrUndefined(row.ht_quotationdate),
-        houseType: stringOrUndefined(row.ht_surveyhousetype),
-        roofType: stringOrUndefined(row.ht_surveyrooftype),
-        ceilingHeightCm: numberOrUndefined(row.ht_surveyceilingheightcm),
-        hatchTopWidthCm: numberOrUndefined(row.ht_surveyhatchtopwidthcm),
-        hatchTopLengthCm: numberOrUndefined(row.ht_surveyhatchtoplengthcm),
-        hatchInsideWidthCm: numberOrUndefined(row.ht_surveyhatchinsidewidthcm),
-        hatchInsideLengthCm: numberOrUndefined(row.ht_surveyhatchinsidelengthcm),
-        ladderClearanceWidthCm: numberOrUndefined(row.ht_surveyladderclearancewidthcm),
-        ladderArcClearanceCm: numberOrUndefined(row.ht_surveyladderarcclearancecm),
-        ladderArcType: stringOrUndefined(row.ht_surveyladderarctype),
-        planNotes: stringOrUndefined(row.ht_surveyplannotes),
-        additionalInfo: stringOrUndefined(row.ht_surveyadditionalinfo)
-      },
+      surveyDetails,
       customer: {
         contactId: String(contact.contactid),
         name: String(contact.fullname ?? "Customer"),
@@ -619,6 +641,78 @@ function formattedOrBoolean(row: Record<string, unknown>, logicalName: string): 
   const value = row[logicalName];
   if (typeof value === "boolean") return value ? "Yes" : "No";
   return stringOrUndefined(value);
+}
+function formattedFrom(
+  opportunity: Record<string, unknown>,
+  enquiry: Record<string, unknown> | undefined,
+  logicalName: string
+): string | undefined {
+  return formattedOrRaw(opportunity, logicalName)
+    ?? (enquiry ? formattedOrRaw(enquiry, logicalName) : undefined);
+}
+function formattedBooleanFrom(
+  opportunity: Record<string, unknown>,
+  enquiry: Record<string, unknown> | undefined,
+  logicalName: string
+): string | undefined {
+  return formattedOrBoolean(opportunity, logicalName)
+    ?? (enquiry ? formattedOrBoolean(enquiry, logicalName) : undefined);
+}
+function enquiryAddress(enquiry: Record<string, unknown> | undefined): string | undefined {
+  if (!enquiry) return undefined;
+  const address = [enquiry.address1_line1, enquiry.address1_line2, enquiry.address1_line3, enquiry.address1_city]
+    .map(stringOrUndefined)
+    .filter((value): value is string => Boolean(value));
+  return address.length ? address.join(", ") : undefined;
+}
+function opportunitySurveyBackfill(
+  opportunity: Record<string, unknown>,
+  details: SurveyDetails,
+  availableColumns: ReadonlySet<string>
+): Record<string, unknown> {
+  const candidates: Record<string, unknown> = {
+    ht_surveyaddress: details.address,
+    ht_surveypropertytype: details.propertyType,
+    ht_surveypropertyage: details.propertyAge,
+    ht_surveyadvertisingsource: details.advertisingSource,
+    ht_surveyexistinghatchtype: details.existingHatchType,
+    ht_surveyflooringrequired: details.flooringRequired,
+    ht_surveyladderrequired: details.ladderRequired,
+    ht_surveylightrequired: details.lightRequired,
+    ht_surveyinsulationrequired: details.insulationRequired,
+    ht_surveyotherinformation: details.otherInformation
+  };
+  return Object.fromEntries(Object.entries(candidates).filter(([logicalName, value]) =>
+    availableColumns.has(logicalName)
+    && stringOrUndefined(opportunity[logicalName]) === undefined
+    && value !== undefined
+  ));
+}
+function enquiryOpportunityBackfill(
+  opportunity: Record<string, unknown>,
+  enquiry: Record<string, unknown> | undefined,
+  streetName: string | undefined,
+  propertyPostcode: string | undefined
+): Record<string, unknown> {
+  if (!enquiry) return {};
+  const candidates: Record<string, unknown> = {
+    ht_streetname: stringOrUndefined(enquiry.ht_streetname) ?? streetName,
+    ht_propertypostcode: stringOrUndefined(enquiry.ht_propertypostcode) ?? propertyPostcode,
+    ht_propertytype: enquiry.ht_propertytype,
+    ht_propertyage: enquiry.ht_propertyage,
+    ht_existinghatchtype: enquiry.ht_existinghatchtype,
+    ht_loftboardingrequired: enquiry.ht_loftboardingrequired,
+    ht_loftladderrequired: enquiry.ht_loftladderrequired,
+    ht_lightrequired: enquiry.ht_lightrequired,
+    ht_insulationrequired: enquiry.ht_insulationrequired,
+    leadsourcecode: enquiry.leadsourcecode
+  };
+  return Object.fromEntries(Object.entries(candidates).filter(([logicalName, value]) =>
+    (opportunity[logicalName] === null || opportunity[logicalName] === undefined || opportunity[logicalName] === "")
+    && value !== null
+    && value !== undefined
+    && value !== ""
+  ));
 }
 function dateOnlyOrUndefined(value: unknown): string | undefined {
   const result = stringOrUndefined(value);

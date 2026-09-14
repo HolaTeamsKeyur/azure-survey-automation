@@ -39,6 +39,71 @@ test("resolves franchise identity, Opportunity Price List and prefilled survey d
   assert.doesNotMatch(opportunityCall, /ht_surveyaddress/);
 });
 
+test("prefills missing Opportunity survey fields from the originating Enquiry and persists them", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input); calls.push({ url, init });
+    if (url.includes("/EntityDefinitions(LogicalName='opportunity')/Attributes")) {
+      return new Response(JSON.stringify({ value: [
+        { LogicalName: "ht_surveyaddress" }, { LogicalName: "ht_surveypropertytype" }, { LogicalName: "ht_surveypropertyage" },
+        { LogicalName: "ht_surveyadvertisingsource" }, { LogicalName: "ht_surveyexistinghatchtype" }, { LogicalName: "ht_surveyflooringrequired" },
+        { LogicalName: "ht_surveyladderrequired" }, { LogicalName: "ht_surveylightrequired" }, { LogicalName: "ht_surveyinsulationrequired" },
+        { LogicalName: "ht_surveyotherinformation" }
+      ] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    if (url.includes("/opportunities(") && init?.method === "PATCH") return new Response(null, { status: 204 });
+    if (url.includes("/opportunities(")) return new Response(JSON.stringify({
+      opportunityid: "11111111-1111-4111-8111-111111111111", name: "Enquiry 101",
+      _originatingleadid_value: "99999999-9999-4999-8999-999999999999",
+      _pricelevelid_value: "55555555-5555-4555-8555-555555555555",
+      ht_surveyflooringrequired: "Opportunity override",
+      parentcontactid: { contactid: "22222222-2222-4222-8222-222222222222", fullname: "Jamie Taylor", emailaddress1: "jamie@example.test" },
+      ht_Region: { ht_regionid: "33333333-3333-4333-8333-333333333333", ht_name: "Brighton" }
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (url.includes("/leads(")) return new Response(JSON.stringify({
+      address1_line1: "10 Test Road", address1_city: "Brighton", address1_postalcode: "BN1 1AA",
+      ht_propertytype: 1, "ht_propertytype@OData.Community.Display.V1.FormattedValue": "Semi-detached",
+      ht_propertyage: 2, "ht_propertyage@OData.Community.Display.V1.FormattedValue": "1930s",
+      ht_existinghatchtype: 3, "ht_existinghatchtype@OData.Community.Display.V1.FormattedValue": "Push-up",
+      ht_loftboardingrequired: true, ht_loftladderrequired: false, ht_lightrequired: true, ht_insulationrequired: false,
+      leadsourcecode: 4, "leadsourcecode@OData.Community.Display.V1.FormattedValue": "Website",
+      description: "Call before arrival"
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+    return new Response(null, { status: 404 });
+  }) as typeof fetch;
+  const credential = { getToken: async () => ({ token: "test", expiresOnTimestamp: Date.now() + 60_000 }) } as TokenCredential;
+  try {
+    const context = await new DataverseClient("https://example.crm.dynamics.com", credential).getOpportunityContext("11111111-1111-4111-8111-111111111111");
+    assert.equal(context.streetName, "10 Test Road, Brighton");
+    assert.equal(context.propertyPostcode, "BN1 1AA");
+    assert.equal(context.surveyDetails?.address, "10 Test Road, Brighton, BN1 1AA");
+    assert.equal(context.surveyDetails?.propertyType, "Semi-detached");
+    assert.equal(context.surveyDetails?.propertyAge, "1930s");
+    assert.equal(context.surveyDetails?.advertisingSource, "Website");
+    assert.equal(context.surveyDetails?.existingHatchType, "Push-up");
+    assert.equal(context.surveyDetails?.flooringRequired, "Opportunity override");
+    assert.equal(context.surveyDetails?.ladderRequired, "No");
+    assert.equal(context.surveyDetails?.lightRequired, "Yes");
+    assert.equal(context.surveyDetails?.insulationRequired, "No");
+    assert.equal(context.surveyDetails?.otherInformation, "Call before arrival");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.ok(calls.some(call => call.url.includes("/leads(99999999-9999-4999-8999-999999999999)")));
+  const patchCall = calls.find(call => call.init?.method === "PATCH");
+  assert.ok(patchCall);
+  const patchBody = JSON.parse(String(patchCall.init?.body));
+  assert.equal(patchBody.ht_surveypropertytype, "Semi-detached");
+  assert.equal(patchBody.ht_surveylightrequired, "Yes");
+  assert.equal(patchBody.ht_surveyflooringrequired, undefined);
+  assert.equal(patchBody.ht_streetname, "10 Test Road, Brighton");
+  assert.equal(patchBody.ht_propertypostcode, "BN1 1AA");
+  assert.equal(patchBody.ht_propertytype, 1);
+  assert.equal(patchBody.ht_lightrequired, true);
+  assert.equal(patchBody.leadsourcecode, 4);
+});
+
 test("saves only optional Opportunity survey columns that exist in Dataverse", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ url: string; init?: RequestInit }> = [];

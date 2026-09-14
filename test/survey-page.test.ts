@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { renderSurveyForm } from "../src/views/surveyPage.js";
+import { renderSurveyForm, surveyPageHeaders } from "../src/views/surveyPage.js";
 
 test("renders the surveyor-facing property workflow without demo content", () => {
   const html = renderSurveyForm({
@@ -28,10 +28,15 @@ test("renders the surveyor-facing property workflow without demo content", () =>
   assert.match(html, /name="selected_44444444-4444-4444-8444-444444444444"/);
   assert.match(html, /name="quantity_44444444-4444-4444-8444-444444444444"/);
   assert.match(html, /id="product-search"/);
+  assert.match(html, /id="submission-status"/);
   assert.match(html, /data-product-search="loft boarding"/);
   assert.match(html, /from this Opportunity's Price List/);
   assert.doesNotMatch(html, /Request a product/);
   assert.doesNotMatch(html, /mock mode|control room|sample record|Adaptive Card|customer enquiry form/i);
+});
+
+test("allows the same-origin background survey submission", () => {
+  assert.match(surveyPageHeaders("request-id")["Content-Security-Policy"], /connect-src 'self'/);
 });
 
 test("shows every Opportunity Price List product in one scrollable form", () => {

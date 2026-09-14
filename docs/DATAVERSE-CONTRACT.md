@@ -6,6 +6,7 @@ This demonstration creates **no custom tables**. It stores the survey lifecycle 
 
 ```mermaid
 erDiagram
+  LEAD ||--o| OPPORTUNITY : qualifies_to
   CONTACT ||--o{ OPPORTUNITY : customer
   REGION ||--o{ OPPORTUNITY : assigned
   REGION }o--|| ACCOUNT : franchise
@@ -48,6 +49,7 @@ The pilot GBP exchange rate was seeded as 1.3518 USD per GBP because this enviro
 
 ### Opportunity
 
+- `originatingleadid` - qualified source Enquiry used for missing-value fallback
 - `parentcontactid` - customer
 - `ht_region` - Region
 - `pricelevelid` - Opportunity Price List
@@ -108,6 +110,7 @@ For this demonstration, time zone, duration and business hours are Azure applica
 
 ## Demonstration behaviour
 
+- Enquiry qualification mappings populate the Opportunity first. If supported values are still missing, the API recovers them from `originatingleadid`, prefills the form and backfills only blank Opportunity fields.
 - The email/form requires the Opportunity Price List and reads only its survey-enabled Products and prices. There is no Region/Franchise Price List fallback.
 - VAT is not displayed or calculated until Finance approves the authoritative rule.
 - The response is saved on Opportunity. Selected products replace the existing Opportunity Products and the draft Quote Products, so unselected lines are excluded. Quote creation can be delegated to Power Automate with `CREATE_QUOTE_ON_SUBMIT=false`.
@@ -116,7 +119,7 @@ For this demonstration, time zone, duration and business hours are Azure applica
 
 ## Security
 
-- Application user: read Contact, Region, Account, Product, Price List and Price List Item; read/write Opportunity and Order Confirmation; create/read Appointment.
+- Application user: read Lead/Enquiry, Contact, Region, Account, Product, Price List and Price List Item; read/write Opportunity and Order Confirmation; create/read Appointment.
 - Sales users: read response fields; update only fields appropriate to their role.
 - Field security: token ID, snapshot JSON and last-error fields.
 - Enable auditing on schedules, status, recipient, selected products, reasons and timestamps.

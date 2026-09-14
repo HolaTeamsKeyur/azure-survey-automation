@@ -68,7 +68,7 @@ Use one authoritative writer for email and one authoritative writer for Quote cr
 7. In trigger settings enable concurrency control and set degree of parallelism to `1`.
 8. Save, turn on, and test only with an internal email address first.
 
-The URL returned by Azure contains a signed token. Do not construct a public URL containing only an Opportunity GUID.
+The URL returned by Azure uses the Opportunity GUID as a stable locator. When opened, it automatically starts Entra sign-in if needed. The GUID is not authentication: the API still requires the configured tenant and assigned surveyor, then generates a short-lived signed submission token internally. Always use the returned `formUrl` rather than constructing the URL inside the flow.
 
 ## Flow 2 - Survey Submitted - Create Draft Quote
 

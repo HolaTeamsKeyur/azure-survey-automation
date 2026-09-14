@@ -8,18 +8,20 @@ Production-oriented Dynamics 365 / Dataverse property survey workflow.
 2. Sales sets Contact, Region, Surveyor, survey date/time and the Opportunity Price List.
 3. Power Automate calls the Azure ingress endpoint and emails the returned link to the assigned Surveyor.
 4. The Surveyor signs in with Microsoft Entra ID. The API requires the configured tenant and an email match to the assigned Dynamics System User.
-5. The form preloads the Opportunity and Contact, captures on-site details and displays an immutable snapshot of survey-enabled Products on the Opportunity Price List.
-6. Catalogue selections are validated and replace the Opportunity Product set, so unselected lines cannot enter the Quote.
-7. A non-catalogue item becomes a Survey Product Request for office approval; a Quote is deliberately withheld until all requests are resolved.
-8. With no pending request, Dynamics creates or refreshes one draft Quote with only the selected products and the existing Opportunity information.
-9. The later installation-confirmation email is a separate customer-facing process.
+5. The form preloads the Opportunity and Contact. Missing survey details are recovered from the originating Enquiry and copied onto the Opportunity without overwriting existing Opportunity values.
+6. The form captures on-site details and displays an immutable snapshot of survey-enabled Products on the Opportunity Price List.
+7. Catalogue selections are validated and replace the Opportunity Product set, so unselected lines cannot enter the Quote.
+8. A non-catalogue item becomes a Survey Product Request for office approval; a Quote is deliberately withheld until all requests are resolved.
+9. With no pending request, Dynamics creates or refreshes one draft Quote with only the selected products and the existing Opportunity information.
+10. The later installation-confirmation email is a separate customer-facing process.
 
 ## Security boundaries
 
 - Surveyor: Azure Static Web Apps' built-in Entra sign-in; the API restricts access to the configured HolaTeams tenant. Shared-mailbox links can be completed by an authenticated tenant employee.
 - Backend: Dataverse Application User/service principal; no Graph permission when Power Automate sends mail.
 - Power Automate: Office 365 Outlook connector sends survey and installation messages.
-- Survey link: signed, expiring token plus tenant and assigned-email checks.
+- Survey link: stable Opportunity GUID route protected by Entra tenant and assigned-email checks; a short-lived signed token is generated internally for submission and is not exposed in the emailed URL.
+- Browser resilience: in-page submission keeps failures on the form, and same-tab draft recovery restores unsaved entries after an accidental refresh.
 - Automation ingress: separate rotating header secret.
 - Submitted product IDs: restricted to the immutable session snapshot.
 

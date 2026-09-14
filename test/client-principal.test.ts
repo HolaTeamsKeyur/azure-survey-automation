@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { HttpRequest } from "@azure/functions";
 import { loadConfig } from "../src/config.js";
-import { assertSurveyorAccess, readClientPrincipal, surveyorLoginUrl } from "../src/security/clientPrincipal.js";
+import { assertSurveyorAccess, readClientPrincipal, surveyorLoginUrl, surveyorOpportunityLoginUrl, surveyorOpportunityUrl } from "../src/security/clientPrincipal.js";
 
 const config = loadConfig({ DATAVERSE_URL: "https://example.crm.dynamics.com", GRAPH_SENDER_MAILBOX: "surveys@example.com", PUBLIC_BASE_URL: "https://example.azurestaticapps.net", SURVEY_TOKEN_SECRET: "12345678901234567890123456789012", AUTOMATION_INGRESS_KEY: "123456789012345678901234", AZURE_TENANT_ID: "11111111-1111-4111-8111-111111111111", SURVEYOR_ACCESS_MODE: "assigned" });
 
@@ -28,4 +28,16 @@ test("builds an Entra login wrapper for the signed form route", () => {
   const url = surveyorLoginUrl(config.publicBaseUrl, "signed.token");
   assert.match(url, /\/\.auth\/login\/aad\?post_login_redirect_uri=/);
   assert.match(decodeURIComponent(url), /\/api\/survey\/signed.token$/);
+});
+
+test("builds a stable Entra-protected Opportunity survey URL", () => {
+  const opportunityId = "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA";
+  assert.equal(
+    surveyorOpportunityUrl(config.publicBaseUrl, opportunityId),
+    "https://example.azurestaticapps.net/api/survey/opportunity/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+  );
+  assert.match(
+    decodeURIComponent(surveyorOpportunityLoginUrl(config.publicBaseUrl, opportunityId)),
+    /\/api\/survey\/opportunity\/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa$/
+  );
 });

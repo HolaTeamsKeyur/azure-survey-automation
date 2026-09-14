@@ -33,9 +33,13 @@ Used only by the installation-confirmation email. The endpoint validates the Out
 
 ## Hosted fallback endpoints
 
+### `GET /survey/opportunity/{opportunity-guid}`
+
+Permanent surveyor-facing entry point returned in `formUrl`. It requires Microsoft Entra sign-in, validates the configured tenant and assigned surveyor, and generates a fresh short-lived submission token behind the page. Refreshing an open survey renews its submission window; refreshing a completed survey shows the completed confirmation. A GUID is only a record locator and never grants access by itself.
+
 ### `GET|POST /survey/{signed-token}`
 
-Displays and processes the record-specific internal Property Survey. Values are loaded from the related Opportunity and Contact. The signed-in Entra user must be in the configured tenant and their email must match the assigned Surveyor's internal email. Product rows come only from the Opportunity Price List and are restricted to Products whose `ht_ShowInCustomerSurvey` flag is Yes. The immutable send-time snapshot prevents browser tampering. Submitted catalogue selections replace the standard Opportunity Product set. Non-catalogue entries create governed Survey Product Request rows and block Quote generation until approval; otherwise `CREATE_QUOTE_ON_SUBMIT=true` creates a draft Quote, or refreshes its existing draft Quote Products, with exactly the submitted products.
+Internal signed submission endpoint used by the GUID page. Values are loaded from the related Opportunity and Contact. When an Opportunity value is missing, the API reads the originating Lead/Enquiry, uses it to prefill the survey, and persists supported missing values onto the Opportunity without overwriting existing Opportunity edits. The signed-in Entra user must be in the configured tenant and their email must match the assigned Surveyor's internal email. Product rows come only from the Opportunity Price List and are restricted to Products whose `ht_ShowInCustomerSurvey` flag is Yes. The immutable send-time snapshot prevents browser tampering. Submitted catalogue selections replace the standard Opportunity Product set. Non-catalogue entries create governed Survey Product Request rows and block Quote generation until approval; otherwise `CREATE_QUOTE_ON_SUBMIT=true` creates a draft Quote, or refreshes its existing draft Quote Products, with exactly the submitted products. JavaScript submits in-page as JSON so a processing error leaves the entered form intact; the non-JavaScript fallback redirects to the permanent GUID page after success.
 
 ### `GET|POST /installation/{signed-token}`
 
@@ -50,7 +54,7 @@ Liveness only. Readiness checks for Dataverse, Graph, storage and Key Vault must
 ## Common controls
 
 - HTTPS only, no-store responses and restrictive CSP on hosted pages.
-- Tokens have issuer, audience, expiry, token ID, session ID and hashed recipient claims.
+- Internal submission tokens have issuer, audience, expiry, token ID, session ID and hashed recipient claims.
 - Raw customer tokens are not stored in Dataverse or logs.
 - Apply Front Door/WAF or API Management rate limiting before public release.
 - Public error responses must not expose Dataverse payloads, access tokens or configuration.
