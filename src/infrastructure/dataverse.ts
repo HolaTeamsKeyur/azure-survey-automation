@@ -329,45 +329,14 @@ export class DataverseClient {
     return currencyId;
   }
 
-  async replaceOpportunityProducts(opportunityId: string, selections: readonly SurveyProductSelectionSnapshot[]): Promise<void> {
+  async clearOpportunityProducts(opportunityId: string): Promise<void> {
     const opportunity = normalizeGuid(opportunityId);
     const existing = await this.request<{ value: Array<Record<string, unknown>> }>(
-      `opportunityproducts?$select=opportunityproductid,_productid_value&$filter=_opportunityid_value eq ${opportunity}`
+      `opportunityproducts?$select=opportunityproductid&$filter=_opportunityid_value eq ${opportunity}`
     );
-    const selectedIds = new Set(selections.map(selection => normalizeGuid(selection.productId)));
-    const byProduct = new Map<string, string>();
-
     for (const row of existing.value) {
       const rowId = normalizeGuid(String(row.opportunityproductid));
-      const productId = stringOrUndefined(row._productid_value)?.toLowerCase();
-      if (!productId || !selectedIds.has(productId) || byProduct.has(productId)) {
-        await this.request(`opportunityproducts(${rowId})`, { method: "DELETE" });
-      } else {
-        byProduct.set(productId, rowId);
-      }
-    }
-
-    for (const selection of selections) {
-      const productId = normalizeGuid(selection.productId);
-      const body = {
-        quantity: selection.quantity,
-        ispriceoverridden: true,
-        priceperunit: selection.unitPrice
-      };
-      const existingId = byProduct.get(productId);
-      if (existingId) {
-        await this.request(`opportunityproducts(${normalizeGuid(existingId)})`, { method: "PATCH", body: JSON.stringify(body) });
-      } else {
-        await this.request("opportunityproducts", {
-          method: "POST",
-          body: JSON.stringify({
-            ...body,
-            "opportunityid@odata.bind": `/opportunities(${opportunity})`,
-            "productid@odata.bind": `/products(${productId})`,
-            "uomid@odata.bind": `/uoms(${normalizeGuid(selection.unitId)})`
-          })
-        });
-      }
+      await this.request(`opportunityproducts(${rowId})`, { method: "DELETE" });
     }
   }
 

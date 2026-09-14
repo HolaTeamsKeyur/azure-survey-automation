@@ -227,33 +227,25 @@ test("refreshes an existing draft Quote with only the selected products", async 
   assert.equal(body["productid@odata.bind"], "/products(44444444-4444-4444-8444-444444444444)");
 });
 
-test("replaces Opportunity Products with exactly the submitted selection", async () => {
+test("clears all legacy Opportunity Products without creating replacements", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input); calls.push({ url, init });
-    if (url.includes("opportunityproducts?$select")) return new Response(JSON.stringify({ value: [{ opportunityproductid: "44444444-4444-4444-8444-444444444444", _productid_value: "99999999-9999-4999-8999-999999999999" }] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (url.includes("opportunityproducts?$select")) return new Response(JSON.stringify({ value: [{ opportunityproductid: "44444444-4444-4444-8444-444444444444" }] }), { status: 200, headers: { "Content-Type": "application/json" } });
     return new Response(null, { status: 204 });
   }) as typeof fetch;
   const credential = { getToken: async () => ({ token: "test", expiresOnTimestamp: Date.now() + 60_000 }) } as TokenCredential;
   try {
-    await new DataverseClient("https://example.crm.dynamics.com", credential).replaceOpportunityProducts(
-      "11111111-1111-4111-8111-111111111111",
-      [{ productId: "22222222-2222-4222-8222-222222222222", unitId: "33333333-3333-4333-8333-333333333333", name: "Boarding", quantity: 12.5, unitPrice: 60, lineNet: 750, priceIsIndicative: true }]
+    await new DataverseClient("https://example.crm.dynamics.com", credential).clearOpportunityProducts(
+      "11111111-1111-4111-8111-111111111111"
     );
   } finally {
     globalThis.fetch = originalFetch;
   }
-  const create = calls.find(call => call.init?.method === "POST");
   const removed = calls.find(call => call.url.includes("opportunityproducts(44444444-4444-4444-8444-444444444444)") && call.init?.method === "DELETE");
   assert.ok(removed);
-  assert.ok(create);
-  const body = JSON.parse(String(create.init?.body));
-  assert.equal(body.quantity, 12.5);
-  assert.equal(body.priceperunit, 60);
-  assert.equal(body.ispriceoverridden, true);
-  assert.equal(body["opportunityid@odata.bind"], "/opportunities(11111111-1111-4111-8111-111111111111)");
-  assert.equal(body["productid@odata.bind"], "/products(22222222-2222-4222-8222-222222222222)");
+  assert.equal(calls.some(call => call.init?.method === "POST" || call.init?.method === "PATCH"), false);
 });
 
 test("applies the regional price list and generates one quote from the opportunity", async () => {

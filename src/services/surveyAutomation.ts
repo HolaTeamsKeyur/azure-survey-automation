@@ -193,7 +193,9 @@ export class SurveyAutomationService {
     const context = await this.dataverse.getOpportunityContext(session.opportunityId);
     if (!context.priceListId) throw new Error("The Opportunity has no Price List.");
     const currencyId = await this.dataverse.applyOpportunityPriceList(session.opportunityId, context.priceListId);
-    await this.dataverse.replaceOpportunityProducts(session.opportunityId, selected);
+    // Opportunity holds the sales context only. Product selections belong on
+    // the Quote, so also remove lines left by earlier automation versions.
+    await this.dataverse.clearOpportunityProducts(session.opportunityId);
     if (newProductRequests.length) {
       if (!context.surveyorUserId) throw new Error("The Opportunity has no assigned Surveyor.");
       await this.dataverse.createNewProductRequests(session.opportunityId, context.surveyorUserId, currencyId, newProductRequests);

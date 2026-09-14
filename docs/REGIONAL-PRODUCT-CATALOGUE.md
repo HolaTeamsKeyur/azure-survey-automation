@@ -157,4 +157,4 @@ Reject rather than guess when:
 4. The page shows ten rows initially but searches all snapshotted rows.
 5. A quantity greater than zero selects that Product.
 6. Submission validates every selected Product against the immutable snapshot.
-7. The API creates or updates standard Opportunity Product rows and can generate the draft Quote.
+7. The API clears Opportunity Product rows, creates or reuses the draft Quote, and writes the validated selection directly to Quote Products.

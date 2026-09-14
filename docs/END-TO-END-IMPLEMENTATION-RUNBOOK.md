@@ -14,9 +14,9 @@ Implement one controlled process in which:
 4. Azure resolves the Region-specific catalogue, snapshots the allowed products, proposes a survey slot and emails a signed form link.
 5. Outlook can additionally show an Adaptive Card for simple actions after provider approval.
 6. The customer opens the Azure-hosted form, selects products, enters requested quantities/notes and accepts, declines or requests another time.
-7. Azure validates every selection against the immutable snapshot, saves the response and prepares Opportunity Product lines for staff review.
-8. A surveyor reviews measurements, quantities, prices and tax in Dynamics.
-9. The existing **Create Survey & Quote** command creates the Quote and Quote Products through the supported Dynamics action.
+7. Azure validates every selection against the immutable snapshot, saves the response and writes selected lines only to the draft Quote Products for staff review.
+8. A surveyor reviews measurements, quantities, prices and tax on the draft Quote Products in Dynamics.
+9. The existing quote command can continue the approved document/lifecycle process, but must not copy products onto the Opportunity.
 10. A single native Dynamics Word quote template repeats the actual Quote Product rows and displays Dynamics-calculated totals.
 11. The existing lifecycle converts the accepted Quote to Order Confirmation.
 12. After installation dates are approved, **Send Installation Confirmation** sends a signed form link and optional Outlook card.
@@ -34,7 +34,7 @@ The repository currently contains:
 - A document renderer that already loops through a `products` array.
 - Twelve passing local build/domain tests.
 
-It does **not** currently contain a deployed Azure service, a deployed survey field package, an approved canonical DOCX, customer quantity capture, Opportunity Product creation from the response, approved VAT logic, or an approved Outlook Actionable Message provider.
+It does **not** currently contain an approved canonical DOCX, approved VAT logic, or an approved Outlook Actionable Message provider. Product selections are intentionally stored only on Quote Products, never as Opportunity Products.
 
 Inspection of representative Zoho sources found that the product table is not dynamic. For example, Farnborough, Leeds and Wood Green each contain a 54-row table with hard-coded regional product descriptions and prices. Region names and telephone numbers also differ. These files are source evidence, not deployable Dynamics templates.
 
@@ -52,8 +52,7 @@ flowchart LR
     MAIL --> FORM[Signed Azure form]
     FORM --> API
     API -->|validated response| OPP
-    OPP --> LINES[Opportunity Products pending review]
-    LINES --> QUOTE[Native Dynamics Quote + Quote Products]
+    OPP --> QUOTE[Native Dynamics Quote + Quote Products pending review]
     QUOTE --> WORD[Native repeating-row quote document]
     QUOTE --> ORDER[Order Confirmation]
     ORDER -->|request timestamp update| WH2[Installation webhook]
@@ -191,7 +190,7 @@ Create these presentation columns on **Price List Item**:
 
 The numeric standard Price List Item `amount` remains the machine-readable unit price. Display text supplements it; it must not replace the numeric price used by Dynamics calculations.
 
-### 5.5 Optional Opportunity Product audit fields
+### 5.5 Optional Quote Product audit fields
 
 Add only if Operations needs to distinguish customer requests from staff-entered lines:
 
@@ -209,7 +208,7 @@ Add only if Operations needs to distinguish customer requests from staff-entered
 4. The Dataverse application user receives:
    - Read: Contact, Region, Account, Product, Unit, Price List and Price List Item.
    - Read/write: Opportunity and Order Confirmation automation fields.
-   - Create/read/write/delete as approved: Opportunity Product and Quote Product; create/read/write Appointment and Quote.
+   - Read/delete: Opportunity Product, only to remove legacy rows. Create/read/write/delete: Quote Product. Create/read/write: Appointment and Quote.
    - No delete permission on Opportunity, Quote, Order or customer records.
 5. Assign one solution/component owner for each form, field, webhook, command and flow.
 
@@ -261,8 +260,8 @@ Failure to resolve exactly one approved Price List stops the send and records a 
    - Survey Feedback Comments
    - Survey Responded On
 3. Keep token ID, allowed IDs, JSON snapshots and last error off the normal form.
-4. Keep/add the Opportunity Products subgrid below the response section.
-5. Create a staff view **Customer-requested products pending review** if the optional audit columns are used.
+4. Do not add an Opportunity Products subgrid for this workflow. Add the related Quotes subgrid and review products inside the draft Quote.
+5. Create a Quote Product view **Customer-requested products pending review** if the optional audit columns are used.
 6. Publish and test with Sales and Surveyor personas, not only System Administrator.
 
 ### 8.2 Order Confirmation form
@@ -455,7 +454,7 @@ The current package needs these additions before quantity/totals UAT:
    - Query the five survey display fields with Price List Items.
    - Filter active/survey-enabled items.
    - Add deterministic `$orderby`.
-   - Add idempotent create/update logic for customer-requested Opportunity Products.
+   - Add idempotent create/update logic for customer-requested Quote Products and remove any legacy Opportunity Product rows.
 2. `src/domain/models.ts`
    - Add `ProductSelection { productId, quantity, note? }`.
    - Add regional telephone and price-display metadata.
@@ -469,8 +468,8 @@ The current package needs these additions before quantity/totals UAT:
 5. `src/services/surveyAutomation.ts`
    - Save selection JSON.
    - Set product review status to `pending_review`.
-   - Upsert requested Opportunity Product lines or queue them for explicit staff application.
-   - Never create the final Quote automatically in the first pilot.
+   - Create or reuse one draft Quote and synchronise requested Quote Product lines.
+   - Never create Opportunity Product lines from the survey response.
 6. `src/infrastructure/documents.ts`
    - Add Region phone/email.
    - Add price qualifier and unit.
@@ -700,12 +699,12 @@ Use Adaptive Card 1.0 `Action.Http`, not `Action.Submit`. The callback validates
 2. Validate product IDs and quantities against the snapshot.
 3. Save the immutable selection JSON and response audit fields.
 4. Set status `accepted` and product review `pending_review`.
-5. Upsert customer-requested Opportunity Product lines, or hold until an explicit staff-apply action if Operations chooses that safer mode.
+5. Clear legacy Opportunity Product rows, then create or reuse one draft Quote and synchronise its Quote Products from the validated selection.
 6. Notify the Opportunity owner/surveyor inside Dynamics.
 7. Surveyor confirms measurements, quantities, prices and VAT.
 8. Set product review `reviewed`.
 9. Enable the existing **Create Survey & Quote** command.
-10. Use Dynamics `GenerateQuoteFromOpportunity`, then generate the native Quote Word document.
+10. Generate the native Quote Word document from the reviewed Quote and its Quote Products.
 
 ### 16.2 Survey reschedule requested
 
@@ -791,8 +790,8 @@ Save the reason, notify Operations and block automatic installation progression.
 2. Resolve overlapping appointment/email flow ownership.
 3. Select **Send Customer Survey** on one internal Opportunity.
 4. Confirm exactly one Appointment and one email.
-5. Complete the response and review Opportunity Products.
-6. Create Quote and generate the quote document.
+5. Complete the response and confirm the Opportunity has no product rows; review the draft Quote Products.
+6. Generate the quote document from that draft Quote.
 7. Repeat the installation confirmation path.
 
 **Exit:** one complete internal Enquiry-to-installation scenario with evidence.
@@ -859,7 +858,7 @@ The implementation is done only when:
 - One Region test proves the direct Opportunity Price List path.
 - A second Region proves the Franchise Account default Price List path.
 - Customer selections return to Dataverse with immutable snapshots and quantities.
-- Opportunity Products are created/applied idempotently and reviewed before Quote creation.
+- The Opportunity contains no product rows; one draft Quote is reused and its Quote Products are synchronised idempotently.
 - The Quote document repeats actual Quote Products and matches Dynamics totals.
 - Installation accept/decline/reschedule writes to Order Confirmation.
 - Exactly one automation owns each Appointment and communication event.

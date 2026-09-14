@@ -113,7 +113,7 @@ For this demonstration, time zone, duration and business hours are Azure applica
 - Enquiry qualification mappings populate the Opportunity first. If supported values are still missing, the API recovers them from `originatingleadid`, prefills the form and backfills only blank Opportunity fields.
 - The email/form requires the Opportunity Price List and reads only its survey-enabled Products and prices. There is no Region/Franchise Price List fallback.
 - VAT is not displayed or calculated until Finance approves the authoritative rule.
-- The response is saved on Opportunity. Selected products replace the existing Opportunity Products and the draft Quote Products, so unselected lines are excluded. Quote creation can be delegated to Power Automate with `CREATE_QUOTE_ON_SUBMIT=false`.
+- The response and immutable selection snapshot are saved on Opportunity, but Opportunity Product rows are cleared. Selected products exist only as draft Quote Products, so unselected lines are excluded. If Quote creation is delegated with `CREATE_QUOTE_ON_SUBMIT=false`, that flow must create the Quote Products directly from the saved selection snapshot.
 - The installation response is saved on Order Confirmation; no Task or additional record is created.
 - Product and response snapshots prevent browser tampering and preserve what the customer saw.
 

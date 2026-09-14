@@ -24,7 +24,7 @@ Inside **HolaTeams Survey Automation Demo**:
 4. Add only the main form that will be edited. Do not select **Include all objects**.
 5. Repeat for **Order**. Its Dataverse logical name is `salesorder`; the visible label may be **Order** or **Order Confirmation**.
 6. Repeat for **Price List Item**. Its logical name is `productpricelevel`.
-7. Add **Opportunity Product** only if you are implementing the optional line-review columns in section 6.
+7. Add **Quote Product** so the submitted product lines and any optional line-review columns in section 6 are included in the solution.
 8. Select **Add** and wait for the components to appear in the solution.
 
 Create every new column from this solution, not from an unmanaged default solution.
@@ -137,9 +137,9 @@ Then open **Tables** > **Price List Item** > **Schema** > **Columns**. These fie
 
 Do not add region columns directly to Product. The Product flag controls global survey visibility; the Opportunity Price List determines whether that Product is offered and what price applies.
 
-## 6. Opportunity Products created by submission
+## 6. Quote Products created by submission
 
-Add the existing **Opportunity Product** table to the solution. When the Survey and Quotation Form is submitted, the Azure API creates or updates standard Opportunity Product rows automatically. It uses the selected regional Product, Unit, entered Quantity and the price snapshot displayed on the form. Repeating a request updates the existing product row instead of duplicating it.
+Add the existing **Quote Product** table to the solution. When the Survey and Quotation Form is submitted, the Azure API clears any Opportunity Product rows left by an older automation version, creates or reuses one draft Quote, and synchronises the selected Product, Unit, Quantity and survey price directly to Quote Products. Repeating a request refreshes that same draft Quote rather than intentionally creating duplicates.
 
 The following custom audit columns remain optional; the automation does not require them:
 
@@ -149,7 +149,7 @@ The following custom audit columns remain optional; the automation does not requ
 | Customer Requested Quantity | `ht_CustomerRequestedQuantity` | Decimal number; precision 3 | blank | Yes |
 | Survey Selection Note | `ht_SurveySelectionNote` | Multiline text; 1,000 characters | blank | Yes |
 
-The automation creates **Opportunity Products**, not Quote lines. Staff can review the opportunity products before starting the existing Quote process.
+The Opportunity contains sales and survey context but no product lines. Staff review products and enter mandatory installation details on the **Quote Products** before activating the Quote.
 
 ## 7. Build the Opportunity form section
 
@@ -171,7 +171,7 @@ The automation creates **Opportunity Products**, not Quote lines. Staff can revi
 5. Select each control and enable its read-only/locked property. This is user-interface protection only; section 11 provides real column security.
 6. Keep the section collapsed by default if the normal sales form is already crowded.
 7. Do not add Token ID, Allowed Product IDs, Products Snapshot, Selection Snapshot or Last Error to the normal sales form.
-8. If Opportunity Products are used, add `Customer Requested` and `Customer Requested Quantity` to the staff review view/subgrid. Keep `Survey Selection Note` on the Opportunity Product form.
+8. Do not add an Opportunity Products review subgrid for this workflow. Add the related Quotes subgrid and review lines from the Quote Product form.
 9. Select **Save and publish**.
 
 ## 8. Build the Order form section

@@ -63,7 +63,7 @@ export function renderSurveyForm(model: SurveyFormViewModel): string {
           <p class="fine-print">Prices marked “From” or “indicative” must be reviewed before the quote is issued.</p>
         </section>` : ""}
 
-        <section class="submit-section"><div><h2>Review and submit</h2><p><strong><span id="selected-product-count">0</span> products selected.</strong> Only these products will be placed on the Opportunity and draft Quote.</p></div><p class="submission-status" id="submission-status" role="status" aria-live="polite" hidden></p><button class="primary" type="submit">Complete survey and create quote</button></section>
+        <section class="submit-section"><div><h2>Review and submit</h2><p><strong><span id="selected-product-count">0</span> products selected.</strong> Only these products will be added to the draft Quote. The Opportunity will not contain product lines.</p></div><p class="submission-status" id="submission-status" role="status" aria-live="polite" hidden></p><button class="primary" type="submit">Complete survey and create quote</button></section>
       </article>
     </main>
   </form>`);

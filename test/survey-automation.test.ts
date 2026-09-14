@@ -47,11 +47,12 @@ test("a non-catalogue request blocks quote creation until approval", async () =>
   let quoteCreated = false;
   let requestsCreated = 0;
   let reviewStatus = "";
+  let opportunityProductsCleared = false;
   const dataverse = {
     getSession: async () => session,
     getOpportunityContext: async () => opportunity,
     applyOpportunityPriceList: async () => "88888888-8888-4888-8888-888888888888",
-    replaceOpportunityProducts: async () => undefined,
+    clearOpportunityProducts: async () => { opportunityProductsCleared = true; },
     createNewProductRequests: async (_opportunityId: string, _surveyorId: string, _currencyId: string, requests: unknown[]) => { requestsCreated = requests.length; },
     generateQuoteFromOpportunity: async () => { quoteCreated = true; return { quoteId: "99999999-9999-4999-8999-999999999999", reused: false }; },
     updateSession: async (_id: string, patch: Record<string, unknown>) => { reviewStatus = String(patch.ht_surveyproductreviewstatuskey); }
@@ -60,13 +61,14 @@ test("a non-catalogue request blocks quote creation until approval", async () =>
   const result = await service.submitSurvey({ sessionId: session.id, response: "accepted", selectedProductIds: [product.productId], productSelections: [{ productId: product.productId, quantity: 2 }], newProductRequests: [{ name: "Special trim", quantity: 1 }] }, { sessionId: session.id, tokenId: session.tokenId, recipientHash: hashEmail(session.recipientEmail) });
   assert.equal(requestsCreated, 1);
   assert.equal(quoteCreated, false);
+  assert.equal(opportunityProductsCleared, true);
   assert.equal(reviewStatus, "pending_approval");
   assert.equal(result.requestedProductCount, 1);
   assert.equal(result.quoteId, undefined);
 });
 
-test("submission sends the same selected snapshot to the Opportunity and Quote", async () => {
-  let opportunitySelection: unknown;
+test("submission clears Opportunity Products and sends selections only to the Quote", async () => {
+  let opportunityProductsCleared = false;
   let quoteSelection: unknown;
   let savedPatch: Record<string, unknown> = {};
   let finalExpectedVersion: number | undefined;
@@ -74,7 +76,7 @@ test("submission sends the same selected snapshot to the Opportunity and Quote",
     getSession: async () => session,
     getOpportunityContext: async () => opportunity,
     applyOpportunityPriceList: async () => "88888888-8888-4888-8888-888888888888",
-    replaceOpportunityProducts: async (_opportunityId: string, selected: unknown) => { opportunitySelection = selected; },
+    clearOpportunityProducts: async () => { opportunityProductsCleared = true; },
     generateQuoteFromOpportunity: async (_opportunityId: string, selected: unknown) => { quoteSelection = selected; return { quoteId: "99999999-9999-4999-8999-999999999999", reused: false }; },
     updateSession: async (_id: string, patch: Record<string, unknown>, expectedVersion?: number) => {
       savedPatch = patch;
@@ -86,8 +88,8 @@ test("submission sends the same selected snapshot to the Opportunity and Quote",
     { sessionId: session.id, response: "accepted", selectedProductIds: [product.productId], productSelections: [{ productId: product.productId, quantity: 2 }], details: { propertyType: "Semi-detached" } },
     { sessionId: session.id, tokenId: session.tokenId, recipientHash: hashEmail(session.recipientEmail) }
   );
-  assert.deepEqual(quoteSelection, opportunitySelection);
-  assert.equal((opportunitySelection as Array<{ productId: string }>)[0].productId, product.productId);
+  assert.equal(opportunityProductsCleared, true);
+  assert.equal((quoteSelection as Array<{ productId: string }>)[0].productId, product.productId);
   assert.equal(savedPatch.ht_surveyselectedproductids, product.productId);
   assert.equal(savedPatch.ht_surveypropertytype, "Semi-detached");
   assert.equal(result.quoteId, "99999999-9999-4999-8999-999999999999");

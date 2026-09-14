@@ -99,7 +99,7 @@ equals(length(outputs('List_rows_-_Quotes')?['body/value']), 0)
 8. Leave the No branch empty. This duplicate check is mandatory.
 9. Set concurrency to `1`, save, and test with one disposable Opportunity.
 
-The Azure submit handler applies the resolved regional Price List and its currency to the Opportunity before adding selected Opportunity Products. The standard `GenerateQuoteFromOpportunity` action then copies only those Opportunity Products into Quote Products and calculates native Quote totals.
+The Azure submit handler applies the resolved Price List and currency to the Opportunity, clears Opportunity Product rows, creates or reuses the Quote header, and writes the validated selection directly to Quote Products. If this optional Power Automate Quote writer is enabled instead, it must parse `ht_surveyselectionsnapshotjson` and create the Quote Product rows after generating the Quote header; `GenerateQuoteFromOpportunity` alone will intentionally create no product lines.
 
 ## Flow 3 - Order - Send Installation Confirmation
 
@@ -199,7 +199,7 @@ The action waits for a response, so its flow run can remain running until the cu
 4. Select **Send Surveyor Survey**.
 5. Confirm Flow 1 emails the assigned Surveyor and requires that same surveyor to sign in.
 6. Enter quantities for two products and submit.
-7. In the Opportunity open the **Products** tab and verify exactly two Opportunity Products.
+7. In the Opportunity open the **Products** tab and verify it contains no Opportunity Products; open the draft Quote and verify exactly two Quote Products.
 8. Open the **Quotes** tab and verify one draft Quote containing exactly two Quote Products with the Brighton GBP Price List.
 9. Create/activate an Order from the Quote, enter installation start/finish, and select **Send Installation Confirmation**.
 10. Confirm Flow 3 sends an email containing the three Outlook options and the secure fallback link.

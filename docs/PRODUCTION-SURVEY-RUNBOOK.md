@@ -2,7 +2,7 @@
 
 ## Target transaction
 
-`Lead -> qualified Opportunity -> surveyor assigned -> authenticated survey form -> Opportunity Products / Product Requests -> reviewed draft Quote -> Order -> customer installation confirmation`
+`Lead -> qualified Opportunity -> surveyor assigned -> authenticated survey form -> Quote Products / Product Requests -> reviewed draft Quote -> Order -> customer installation confirmation`
 
 The property survey belongs to the internal surveyor. The later installation confirmation belongs to the customer. They use separate recipients and separate security rules.
 
@@ -41,7 +41,7 @@ Minimum privileges:
 
 - Organisation read: Lead/Enquiry, Account, Contact, Product, Unit, Price List, Price List Item, Transaction Currency, System User.
 - Organisation read/write: Opportunity.
-- Organisation create/read/write/delete: Opportunity Product and Quote Product. Organisation create/read/write: Quote and Survey Product Request.
+- Organisation read/delete: Opportunity Product, only to remove legacy rows. Organisation create/read/write/delete: Quote Product. Organisation create/read/write: Quote and Survey Product Request.
 - Organisation read: Region and Survey Template custom tables.
 - Append/Append To where required by Opportunity/Product/Unit relationships.
 - Permission to invoke `GenerateQuoteFromOpportunity` through the normal Dataverse API.
@@ -182,11 +182,11 @@ Create `A4L - Product Request - Release Quote`:
 1. Trigger on Survey Product Request modified; Select columns `ht_statuskey,ht_approvedproduct,ht_approvedunit,ht_approvedunitprice`; Filter rows `ht_statuskey eq 'approved'`.
 2. Validate Approved Product, Approved Unit and Approved Unit Price are present. If not, terminate Failed with a clear message.
 3. Get the related Opportunity.
-4. List Opportunity Products filtered by the related Opportunity and Approved Product. Update quantity/price if found; otherwise add an Opportunity Product using the approved Product, Unit, Quantity and Unit Price.
-5. List Survey Product Requests for that Opportunity where `ht_statuskey eq 'pending'`. Continue only when the returned count is zero.
-6. List Quotes for the Opportunity, top count 1. If none exists, run Dataverse unbound action `GenerateQuoteFromOpportunity` with the Opportunity ID.
-7. Update Opportunity `Survey Product Review Status Key = applied`.
-8. Set concurrency to 1. Use a duplicate check before creating both the Opportunity Product and Quote.
+4. List Survey Product Requests for that Opportunity where `ht_statuskey eq 'pending'`. Continue only when the returned count is zero.
+5. List Quotes for the Opportunity and reuse its draft Quote. If none exists, run Dataverse unbound action `GenerateQuoteFromOpportunity` with the Opportunity ID to create the header.
+6. Parse the saved `ht_surveyselectionsnapshotjson`, merge the approved request, and synchronise those lines directly to Quote Products using the approved Product, Unit, Quantity and Unit Price.
+7. Confirm the Opportunity contains no product rows, then update Opportunity `Survey Product Review Status Key = applied`.
+8. Set concurrency to 1. Use a duplicate check for the Quote header and upsert Quote Products by Product and Unit. Never create Opportunity Products.
 
 Rejected requests use `ht_statuskey = rejected`; an office user must either replace them with a catalogue selection or explicitly decide that the Quote can proceed. Do not auto-create the global Product master from free text.
 
@@ -215,8 +215,8 @@ Keep the existing Dataverse URL, public base URL and token/ingress secrets. Rota
 3. Trigger Flow 1. Confirm the email goes to the Surveyor, never the Contact.
 4. Open in a private browser. Sign in as a different tenant/user and confirm access is denied; sign in as the assigned surveyor and confirm access.
 5. Confirm customer, address, property type/age, hatch and requirement fields are prefilled from the Enquiry, and only flagged Products from the Opportunity Price List are shown.
-6. Submit catalogue products only. Confirm the Opportunity Products and draft Quote Products contain exactly the selected rows; confirm a previously unselected line is removed.
-7. Repeat with a new Opportunity and add a non-catalogue request. Confirm Opportunity Products are saved, a pending Survey Product Request is created, and no Quote exists.
+6. Submit catalogue products only. Confirm the Opportunity contains no product rows and the draft Quote Products contain exactly the selected rows; confirm a previously unselected line is removed.
+7. Repeat with a new Opportunity and add a non-catalogue request. Confirm no Opportunity Products are saved, a pending Survey Product Request is created, and no Quote exists.
 8. Map and approve the request. Confirm the approval flow adds the line once and creates one Quote.
 9. Change the Region template section order and confirm a newly opened survey follows that layout.
 10. Continue Quote -> Order and run the separate customer installation-confirmation flow.

@@ -29,6 +29,8 @@ test("renders the surveyor-facing property workflow without demo content", () =>
   assert.match(html, /name="quantity_44444444-4444-4444-8444-444444444444"/);
   assert.match(html, /id="product-search"/);
   assert.match(html, /id="submission-status"/);
+  assert.match(html, /Only these products will be added to the draft Quote/);
+  assert.doesNotMatch(html, /placed on the Opportunity and draft Quote/);
   assert.match(html, /data-product-search="loft boarding"/);
   assert.match(html, /from this Opportunity's Price List/);
   assert.doesNotMatch(html, /Request a product/);
