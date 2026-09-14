@@ -56,6 +56,13 @@ test("prefills missing Opportunity survey fields from the originating Enquiry an
         { LogicalName: "ht_insulationrequired" }
       ] }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
+    if (url.includes("/EntityDefinitions(LogicalName='lead')/Attributes")) {
+      return new Response(JSON.stringify({ value: [
+        { LogicalName: "ht_propertytype" }, { LogicalName: "ht_propertyage" }, { LogicalName: "ht_existinghatchtype" },
+        { LogicalName: "ht_loftboardingrequired" }, { LogicalName: "ht_loftladderrequired" }, { LogicalName: "ht_lightrequired" },
+        { LogicalName: "ht_insulationrequired" }
+      ] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
     if (url.includes("/opportunities(") && init?.method === "PATCH") return new Response(null, { status: 204 });
     if (url.includes("/opportunities(")) return new Response(JSON.stringify({
       opportunityid: "11111111-1111-4111-8111-111111111111", name: "Enquiry 101",
@@ -95,6 +102,9 @@ test("prefills missing Opportunity survey fields from the originating Enquiry an
     globalThis.fetch = originalFetch;
   }
   assert.ok(calls.some(call => call.url.includes("/leads(99999999-9999-4999-8999-999999999999)")));
+  const leadCall = calls.find(call => call.url.includes("/leads(99999999-9999-4999-8999-999999999999)"));
+  assert.ok(leadCall);
+  assert.doesNotMatch(leadCall.url, /ht_propertypostcode|ht_streetname/);
   const patchCall = calls.find(call => call.init?.method === "PATCH");
   assert.ok(patchCall);
   const patchBody = JSON.parse(String(patchCall.init?.body));

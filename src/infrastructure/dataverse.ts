@@ -57,9 +57,11 @@ const OPTIONAL_OPPORTUNITY_CONTEXT_COLUMNS = [
   ...OPTIONAL_OPPORTUNITY_ENQUIRY_COLUMNS
 ] as const;
 const OPTIONAL_OPPORTUNITY_CONTEXT_COLUMN_SET = new Set<string>(OPTIONAL_OPPORTUNITY_CONTEXT_COLUMNS);
+const OPTIONAL_LEAD_ENQUIRY_COLUMN_SET = new Set<string>(OPTIONAL_OPPORTUNITY_ENQUIRY_COLUMNS);
 
 export class DataverseClient {
   private opportunitySurveyColumnsPromise?: Promise<Set<string>>;
+  private leadEnquiryColumnsPromise?: Promise<Set<string>>;
 
   constructor(
     private readonly baseUrl: string,
@@ -112,6 +114,29 @@ export class DataverseClient {
     }
   }
 
+  private getAvailableLeadEnquiryColumns(): Promise<Set<string>> {
+    this.leadEnquiryColumnsPromise ??= this.loadAvailableLeadEnquiryColumns();
+    return this.leadEnquiryColumnsPromise;
+  }
+
+  private async loadAvailableLeadEnquiryColumns(): Promise<Set<string>> {
+    try {
+      const result = await this.request<{ value: Array<{ LogicalName?: string }> }>(
+        "EntityDefinitions(LogicalName='lead')/Attributes?$select=LogicalName"
+      );
+      return new Set(
+        result.value
+          .map(attribute => attribute.LogicalName?.toLowerCase())
+          .filter((name): name is string =>
+            typeof name === "string" && OPTIONAL_LEAD_ENQUIRY_COLUMN_SET.has(name)
+          )
+      );
+    } catch {
+      // Standard Lead fields remain usable when custom-field metadata cannot be read.
+      return new Set<string>();
+    }
+  }
+
   private async removeUnavailableOpportunitySurveyColumns(
     patch: Record<string, unknown>
   ): Promise<Record<string, unknown>> {
@@ -140,9 +165,16 @@ export class DataverseClient {
     if (!region?.ht_regionid) throw new Error("Opportunity requires a Region.");
 
     const originatingLeadId = stringOrUndefined(row._originatingleadid_value);
+    const availableLeadColumns = originatingLeadId
+      ? await this.getAvailableLeadEnquiryColumns()
+      : new Set<string>();
+    const optionalLeadSelect = OPTIONAL_OPPORTUNITY_ENQUIRY_COLUMNS
+      .filter(name => availableLeadColumns.has(name))
+      .join(",");
     const enquiry = originatingLeadId
       ? await this.request<Record<string, unknown>>(
-        `leads(${normalizeGuid(originatingLeadId)})?$select=leadid,address1_line1,address1_line2,address1_line3,address1_city,address1_postalcode,description,leadsourcecode,ht_propertypostcode,ht_streetname,ht_propertytype,ht_propertyage,ht_existinghatchtype,ht_loftboardingrequired,ht_loftladderrequired,ht_lightrequired,ht_insulationrequired`
+        `leads(${normalizeGuid(originatingLeadId)})?$select=leadid,address1_line1,address1_line2,address1_line3,address1_city,address1_postalcode,description,leadsourcecode` +
+        `${optionalLeadSelect ? `,${optionalLeadSelect}` : ""}`
       )
       : undefined;
 
