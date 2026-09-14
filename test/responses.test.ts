@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { WebhookPayloadError } from "../src/domain/webhook.js";
-import { publicActionFailure, publicFormErrorMessage, webhookFailure } from "../src/http/responses.js";
+import { processingDiagnostic, publicActionFailure, publicFormErrorMessage, webhookFailure } from "../src/http/responses.js";
 import { IngressAuthenticationError } from "../src/security/tokens.js";
 
 const correlation = "test-correlation-123";
@@ -25,4 +25,12 @@ test("public response errors are redacted and carry a correlation ID", () => {
   assert.equal(failure.status, 400);
   assert.equal((failure.headers as Record<string, string>)["x-correlation-id"], correlation);
   assert.match(publicFormErrorMessage(), /invalid or expired/);
+});
+
+test("authenticated survey forms can show only recognised processing diagnostics", () => {
+  assert.equal(
+    processingDiagnostic(new Error('Dataverse POST opportunityproducts failed (400): {"error":{"message":"The unit is not valid for this product."}}')),
+    "Dataverse request failed (400): The unit is not valid for this product."
+  );
+  assert.equal(processingDiagnostic(new Error("secret internal failure")), undefined);
 });

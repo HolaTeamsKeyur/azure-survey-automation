@@ -27,7 +27,7 @@ export function webhookFailure(error: unknown, id: string): HttpResponseInit {
   };
 }
 
-function processingDiagnostic(error: unknown): string | undefined {
+export function processingDiagnostic(error: unknown): string | undefined {
   if (!(error instanceof Error)) return undefined;
   const message = error.message;
   if (/^Opportunity requires |^The Opportunity |^Order Confirmation requires |^The Opportunity Price List /.test(message)) {

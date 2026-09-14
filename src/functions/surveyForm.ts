@@ -1,6 +1,6 @@
 import { app, type HttpRequest, type HttpResponseInit, type InvocationContext } from "@azure/functions";
 import { loadConfig } from "../config.js";
-import { correlationId, publicFormErrorMessage } from "../http/responses.js";
+import { correlationId, processingDiagnostic, publicFormErrorMessage } from "../http/responses.js";
 import { verifySurveyToken } from "../security/tokens.js";
 import { SurveyAutomationService } from "../services/surveyAutomation.js";
 import { renderSurveyForm, renderSurveyThanks, surveyPageHeaders } from "../views/surveyPage.js";
@@ -61,7 +61,9 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
         status,
         headers: jsonHeaders(requestId),
         jsonBody: {
-          error: error instanceof SurveyorAccessError ? error.message : "The survey could not be saved.",
+          error: error instanceof SurveyorAccessError
+            ? error.message
+            : processingDiagnostic(error) ?? "The survey could not be saved.",
           correlationId: requestId
         }
       };
