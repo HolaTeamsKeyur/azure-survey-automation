@@ -11,7 +11,7 @@ test("renders the surveyor-facing property workflow without demo content", () =>
       surveyorUserId: "66666666-6666-4666-8666-666666666666",
       surveyDetails: { propertyType: "Semi-detached", propertyAge: "1930s", existingHatchType: "Push-up" },
       customer: { contactId: "22222222-2222-4222-8222-222222222222", name: "Jamie Taylor", email: "jamie@example.test", mobile: "07700 900123" },
-      region: { id: "33333333-3333-4333-8333-333333333333", name: "Brighton Region", franchiseName: "Brighton", telephone: "01273 034001", senderMailbox: "brighton@example.test", surveyorMailbox: "surveyor@example.test", surveyorName: "Alex Surveyor", surveyorUserId: "66666666-6666-4666-8666-666666666666", timeZone: "Europe/London", surveyDurationMinutes: 60, businessDayStartHour: 9, businessDayEndHour: 17, autoScheduleEnabled: false }
+      region: { id: "33333333-3333-4333-8333-333333333333", name: "Brighton Region", franchiseName: "Access4Lofts Brighton", telephone: "01273 034001", senderMailbox: "brighton@example.test", surveyorMailbox: "surveyor@example.test", surveyorName: "Alex Surveyor", surveyorUserId: "66666666-6666-4666-8666-666666666666", timeZone: "Europe/London", surveyDurationMinutes: 60, businessDayStartHour: 9, businessDayEndHour: 17, autoScheduleEnabled: false }
     },
     products: [{ productId: "44444444-4444-4444-8444-444444444444", unitId: "55555555-5555-4555-8555-555555555555", name: "Loft boarding", quantity: 1, price: 60, priceDisplayText: "From £60.00 per sq m", selectedByDefault: false, sortOrder: 1 }],
     enableNewProductRequests: true
@@ -20,8 +20,9 @@ test("renders the surveyor-facing property workflow without demo content", () =>
   assert.match(html, /Property survey/);
   assert.match(html, /Customer survey worksheet/);
   assert.match(html, /Jamie Taylor/);
-  assert.match(html, /Access4Lofts Brighton/);
-  assert.match(html, /Brighton Region/);
+  assert.match(html, /alt="Access4Lofts"/);
+  assert.match(html, /<strong>Brighton<\/strong>/);
+  assert.doesNotMatch(html, /Access4Lofts Access4Lofts/);
   assert.match(html, /value="Semi-detached"/);
   assert.match(html, /value="1930s"/);
   assert.match(html, /Loft boarding/);
