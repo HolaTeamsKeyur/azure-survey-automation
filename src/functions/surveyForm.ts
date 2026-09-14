@@ -25,7 +25,10 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
     }
 
     const form = await request.formData();
-    const productSelections = model.products.map(product => ({ productId: product.productId, quantity: number(form.get(`quantity_${product.productId}`)) })).filter(item => item.quantity > 0);
+    const productSelections = model.products
+      .filter(product => form.has(`selected_${product.productId}`))
+      .map(product => ({ productId: product.productId, quantity: number(form.get(`quantity_${product.productId}`)) }))
+      .filter(item => item.quantity > 0);
     const result = await service.submitSurvey({
       sessionId: claims.sessionId,
       response: "accepted",

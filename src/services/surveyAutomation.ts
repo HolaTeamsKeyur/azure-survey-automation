@@ -51,10 +51,10 @@ export class SurveyAutomationService {
     }
 
     if (!context.priceListId) {
-      throw new Error(`Opportunity ${context.name} requires a Price List, or its Region Franchise Account requires a Default Price List.`);
+      throw new Error(`Opportunity ${context.name} requires a Price List.`);
     }
-    const products = await this.dataverse.getRegionProducts(context.priceListId);
-    if (!products.length) throw new Error("The Opportunity Price List has no products.");
+    const products = await this.dataverse.getOpportunityPriceListProducts(context.priceListId);
+    if (!products.length) throw new Error("The Opportunity Price List has no survey-enabled products.");
     const slot = this.config.enableAutoScheduling
       ? await this.findSurveySlot(context)
       : pilotSurveySlot(context, this.config.DEFAULT_SURVEY_DURATION_MINUTES);
@@ -191,15 +191,15 @@ export class SurveyAutomationService {
       throw new Error("New product requests are not enabled for this environment.");
     }
     const context = await this.dataverse.getOpportunityContext(session.opportunityId);
-    if (!context.priceListId) throw new Error("The Opportunity has no regional Price List.");
+    if (!context.priceListId) throw new Error("The Opportunity has no Price List.");
     const currencyId = await this.dataverse.applyOpportunityPriceList(session.opportunityId, context.priceListId);
-    await this.dataverse.upsertOpportunityProducts(session.opportunityId, selected);
+    await this.dataverse.replaceOpportunityProducts(session.opportunityId, selected);
     if (newProductRequests.length) {
       if (!context.surveyorUserId) throw new Error("The Opportunity has no assigned Surveyor.");
       await this.dataverse.createNewProductRequests(session.opportunityId, context.surveyorUserId, currencyId, newProductRequests);
     }
     const quote = this.config.createQuoteOnSubmit && newProductRequests.length === 0
-      ? await this.dataverse.generateQuoteFromOpportunity(session.opportunityId)
+      ? await this.dataverse.generateQuoteFromOpportunity(session.opportunityId, selected)
       : undefined;
     await this.dataverse.updateSession(session.id, {
       ...commonPatch,

@@ -57,7 +57,10 @@ async function surveyRoute(request: IncomingMessage, response: ServerResponse, t
   if (request.method === "GET") return htmlWithHeaders(response, 200, renderSurveyForm({ token, context, scheduledStart: "2026-09-15T10:00:00+01:00", products }), surveyPageHeaders(randomUUID()));
   if (request.method !== "POST") return methodNotAllowed(response);
   const form = await formData(request);
-  const selections = products.map(product => ({ productId: product.productId, quantity: numeric(form.get(`quantity_${product.productId}`)) })).filter(item => item.quantity > 0);
+  const selections = products
+    .filter(product => form.has(`selected_${product.productId}`))
+    .map(product => ({ productId: product.productId, quantity: numeric(form.get(`quantity_${product.productId}`)) }))
+    .filter(item => item.quantity > 0);
   const submission = validateSurveySubmission({ sessionId: surveyId, response: "accepted", selectedProductIds: selections.map(item => item.productId), productSelections: selections, details: surveyDetails(form) });
   assertTransition(state.surveyStatus, submission.response);
   state.lines = validateProductSelections(submission.productSelections ?? [], products);

@@ -1,4 +1,5 @@
 Table,Display Name,Schema Name,Type,Required For Demo,User Form
+Product,Show in Customer Survey,ht_ShowInCustomerSurvey,Yes No default No,Yes,Product form
 Opportunity,Survey Automation Status,ht_SurveyAutomationStatusKey,Text 50,Yes,Read-only
 Opportunity,Survey Recipient Email,ht_SurveyRecipientEmail,Email 200,Yes,Read-only
 Opportunity,Survey Response Expires At,ht_SurveyExpiresAt,DateTime TimeZoneIndependent,Yes,Read-only

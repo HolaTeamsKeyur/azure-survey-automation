@@ -16,20 +16,21 @@ erDiagram
   OPPORTUNITY ||--o{ ORDER_CONFIRMATION : progresses_to
 ```
 
-The Region's existing `ht_franchise` lookup points to Account. The Account's standard Default Price List provides the regional product catalogue when the Opportunity does not already have a Price List.
+The Opportunity's standard `pricelevelid` is the authoritative Price List for its survey. Region and Franchise Account remain available for identity and contact information, but they do not supply a fallback product catalogue.
 
 ## Regional catalogue structure
 
-Products are global master records and must not be duplicated for each franchise. Regional price and display differences belong on Price List Items:
+Products are global master records and must not be duplicated for each franchise. Survey visibility belongs on Product; regional price and display differences belong on Price List Items:
 
 1. Create or reuse the Franchise Account.
 2. Create one Price List for the Region/currency.
-3. Set the Account's standard `defaultpricelevelid` to that Price List.
+3. Set the Opportunity's standard `pricelevelid` to that Price List.
 4. Create or reuse the `ht_region` row and set its `ht_franchise` lookup to the Account.
 5. Reuse the global Products and add one Price List Item per product required in that Region.
-6. On each Price List Item set `ht_showincustomersurvey`, `ht_surveydisplayorder`, `ht_surveycustomerdescription`, `ht_surveypricedisplaytext`, and `ht_surveypriceisindicative`.
+6. On each eligible Product set `ht_showincustomersurvey = Yes`.
+7. On each Price List Item set `ht_surveydisplayorder`, `ht_surveycustomerdescription`, `ht_surveypricedisplaytext`, and `ht_surveypriceisindicative`.
 
-The Opportunity may override the inherited regional catalogue by setting its standard `pricelevelid`. Otherwise the application resolves `Opportunity -> Region -> Franchise Account -> Default Price List`.
+The form includes the intersection of Products on the Opportunity Price List and Products whose `ht_showincustomersurvey` flag is Yes.
 
 ### Brighton pilot seeded on 10 September 2026
 
@@ -107,9 +108,9 @@ For this demonstration, time zone, duration and business hours are Azure applica
 
 ## Demonstration behaviour
 
-- The email/form reads products and prices from the Opportunity Price List. If absent, it uses Region -> Franchise Account -> Default Price List.
+- The email/form requires the Opportunity Price List and reads only its survey-enabled Products and prices. There is no Region/Franchise Price List fallback.
 - VAT is not displayed or calculated until Finance approves the authoritative rule.
-- The response is saved on Opportunity. By default Azure creates one draft Quote from the selected Opportunity Products; this can be delegated to Power Automate with `CREATE_QUOTE_ON_SUBMIT=false`.
+- The response is saved on Opportunity. Selected products replace the existing Opportunity Products and the draft Quote Products, so unselected lines are excluded. Quote creation can be delegated to Power Automate with `CREATE_QUOTE_ON_SUBMIT=false`.
 - The installation response is saved on Order Confirmation; no Task or additional record is created.
 - Product and response snapshots prevent browser tampering and preserve what the customer saw.
 

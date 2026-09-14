@@ -5,13 +5,13 @@ Production-oriented Dynamics 365 / Dataverse property survey workflow.
 ## Current workflow
 
 1. A Lead is qualified to an Opportunity.
-2. Sales sets Contact, Region, Surveyor, survey date/time and the resolved regional Price List.
+2. Sales sets Contact, Region, Surveyor, survey date/time and the Opportunity Price List.
 3. Power Automate calls the Azure ingress endpoint and emails the returned link to the assigned Surveyor.
 4. The Surveyor signs in with Microsoft Entra ID. The API requires the configured tenant and an email match to the assigned Dynamics System User.
-5. The form preloads the Opportunity and Contact, captures on-site details and displays the immutable regional Price List snapshot.
-6. Catalogue selections are validated and upserted as Opportunity Products.
+5. The form preloads the Opportunity and Contact, captures on-site details and displays an immutable snapshot of survey-enabled Products on the Opportunity Price List.
+6. Catalogue selections are validated and replace the Opportunity Product set, so unselected lines cannot enter the Quote.
 7. A non-catalogue item becomes a Survey Product Request for office approval; a Quote is deliberately withheld until all requests are resolved.
-8. With no pending request, Dynamics creates one draft Quote from the Opportunity.
+8. With no pending request, Dynamics creates or refreshes one draft Quote with only the selected products and the existing Opportunity information.
 9. The later installation-confirmation email is a separate customer-facing process.
 
 ## Security boundaries

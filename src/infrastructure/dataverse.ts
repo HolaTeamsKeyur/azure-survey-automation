@@ -123,14 +123,13 @@ export class DataverseClient {
     if (!contact?.contactid || !contact.emailaddress1) throw new Error("Opportunity requires a Contact with an email address.");
     if (!region?.ht_regionid) throw new Error("Opportunity requires a Region.");
 
-    let priceListId = stringOrUndefined(row._pricelevelid_value);
+    const priceListId = stringOrUndefined(row._pricelevelid_value);
     const franchiseId = stringOrUndefined(region._ht_franchise_value);
     const franchise = franchiseId
       ? await this.request<Record<string, unknown>>(
-        `accounts(${normalizeGuid(franchiseId)})?$select=name,_defaultpricelevelid_value`
+        `accounts(${normalizeGuid(franchiseId)})?$select=name`
       )
       : undefined;
-    if (!priceListId) priceListId = stringOrUndefined(franchise?._defaultpricelevelid_value);
     const surveyorUserId = stringOrUndefined(row._ht_surveyor_value);
     let surveyorMailbox: string | undefined;
     let surveyorName: string | undefined;
@@ -203,15 +202,18 @@ export class DataverseClient {
     };
   }
 
-  async getRegionProducts(priceListId: string): Promise<ProductOption[]> {
+  async getOpportunityPriceListProducts(priceListId: string): Promise<ProductOption[]> {
     const id = normalizeGuid(priceListId);
     const result = await this.request<{ value: Array<Record<string, unknown>> }>(
       `productpricelevels?$select=productpricelevelid,amount,_productid_value,_uomid_value,ht_surveydisplayorder,ht_surveycustomerdescription,ht_surveypricedisplaytext,ht_surveypriceisindicative&` +
-      `$expand=productid($select=productid,name,description),uomid($select=uomid,name)&` +
-      `$filter=_pricelevelid_value eq ${id} and ht_showincustomersurvey eq true&` +
+      `$expand=productid($select=productid,name,description,ht_showincustomersurvey),uomid($select=uomid,name)&` +
+      `$filter=_pricelevelid_value eq ${id}&` +
       `$orderby=ht_surveydisplayorder asc`
     );
-    return result.value.map((row, index) => {
+    return result.value.filter(row => {
+      const product = row.productid as Record<string, unknown> | undefined;
+      return product?.ht_showincustomersurvey === true;
+    }).map((row, index) => {
       const product = row.productid as Record<string, unknown> | undefined;
       const unit = row.uomid as Record<string, unknown> | undefined;
       return {
@@ -257,12 +259,23 @@ export class DataverseClient {
     return currencyId;
   }
 
-  async upsertOpportunityProducts(opportunityId: string, selections: readonly SurveyProductSelectionSnapshot[]): Promise<void> {
+  async replaceOpportunityProducts(opportunityId: string, selections: readonly SurveyProductSelectionSnapshot[]): Promise<void> {
     const opportunity = normalizeGuid(opportunityId);
     const existing = await this.request<{ value: Array<Record<string, unknown>> }>(
       `opportunityproducts?$select=opportunityproductid,_productid_value&$filter=_opportunityid_value eq ${opportunity}`
     );
-    const byProduct = new Map(existing.value.map(row => [String(row._productid_value).toLowerCase(), String(row.opportunityproductid)]));
+    const selectedIds = new Set(selections.map(selection => normalizeGuid(selection.productId)));
+    const byProduct = new Map<string, string>();
+
+    for (const row of existing.value) {
+      const rowId = normalizeGuid(String(row.opportunityproductid));
+      const productId = stringOrUndefined(row._productid_value)?.toLowerCase();
+      if (!productId || !selectedIds.has(productId) || byProduct.has(productId)) {
+        await this.request(`opportunityproducts(${rowId})`, { method: "DELETE" });
+      } else {
+        byProduct.set(productId, rowId);
+      }
+    }
 
     for (const selection of selections) {
       const productId = normalizeGuid(selection.productId);
@@ -330,13 +343,20 @@ export class DataverseClient {
     return definition ? parseSurveyLayout(definition) : undefined;
   }
 
-  async generateQuoteFromOpportunity(opportunityId: string): Promise<{ quoteId: string; reused: boolean }> {
+  async generateQuoteFromOpportunity(
+    opportunityId: string,
+    selections: readonly SurveyProductSelectionSnapshot[] = []
+  ): Promise<{ quoteId: string; reused: boolean }> {
     const opportunity = normalizeGuid(opportunityId);
     const existing = await this.request<{ value: Array<Record<string, unknown>> }>(
-      `quotes?$select=quoteid,createdon&$filter=_opportunityid_value eq ${opportunity}&$orderby=createdon desc&$top=1`
+      `quotes?$select=quoteid,createdon&$filter=_opportunityid_value eq ${opportunity} and statecode eq 0&$orderby=createdon desc&$top=1`
     );
     const existingId = stringOrUndefined(existing.value[0]?.quoteid);
-    if (existingId) return { quoteId: normalizeGuid(existingId), reused: true };
+    if (existingId) {
+      const quoteId = normalizeGuid(existingId);
+      await this.replaceQuoteProducts(quoteId, selections);
+      return { quoteId, reused: true };
+    }
 
     const generated = await this.request<Record<string, unknown>>("GenerateQuoteFromOpportunity", {
       method: "POST",
@@ -352,7 +372,11 @@ export class DataverseClient {
       .filter((value): value is Record<string, unknown> => Boolean(value) && typeof value === "object") as Array<Record<string, unknown>>;
     for (const container of containers) {
       const quoteId = stringOrUndefined(container.quoteid) ?? stringOrUndefined(container.QuoteId);
-      if (quoteId) return { quoteId: normalizeGuid(quoteId), reused: false };
+      if (quoteId) {
+        const normalizedQuoteId = normalizeGuid(quoteId);
+        await this.replaceQuoteProducts(normalizedQuoteId, selections);
+        return { quoteId: normalizedQuoteId, reused: false };
+      }
     }
 
     const created = await this.request<{ value: Array<Record<string, unknown>> }>(
@@ -360,7 +384,35 @@ export class DataverseClient {
     );
     const quoteId = stringOrUndefined(created.value[0]?.quoteid);
     if (!quoteId) throw new Error("Dataverse did not return the generated Quote.");
-    return { quoteId: normalizeGuid(quoteId), reused: false };
+    const normalizedQuoteId = normalizeGuid(quoteId);
+    await this.replaceQuoteProducts(normalizedQuoteId, selections);
+    return { quoteId: normalizedQuoteId, reused: false };
+  }
+
+  private async replaceQuoteProducts(
+    quoteId: string,
+    selections: readonly SurveyProductSelectionSnapshot[]
+  ): Promise<void> {
+    const quote = normalizeGuid(quoteId);
+    const existing = await this.request<{ value: Array<Record<string, unknown>> }>(
+      `quotedetails?$select=quotedetailid&$filter=_quoteid_value eq ${quote}`
+    );
+    for (const row of existing.value) {
+      await this.request(`quotedetails(${normalizeGuid(String(row.quotedetailid))})`, { method: "DELETE" });
+    }
+    for (const selection of selections) {
+      await this.request("quotedetails", {
+        method: "POST",
+        body: JSON.stringify({
+          quantity: selection.quantity,
+          ispriceoverridden: true,
+          priceperunit: selection.unitPrice,
+          "quoteid@odata.bind": `/quotes(${quote})`,
+          "productid@odata.bind": `/products(${normalizeGuid(selection.productId)})`,
+          "uomid@odata.bind": `/uoms(${normalizeGuid(selection.unitId)})`
+        })
+      });
+    }
   }
 
   async findOpenSession(opportunityId: string): Promise<SurveySession | undefined> {

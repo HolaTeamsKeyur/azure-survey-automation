@@ -49,14 +49,12 @@ Existing routing automation associates **Cristian Chelariu** with Brighton. The 
 | 290 | Heading: Second loft | £0.00 | Do not import as Product |
 | 300 | Heading: Third loft | £0.00 | Do not import as Product |
 
-The first ten rows above are what the form will initially display when their Price List Item display orders are configured as shown. Searching looks through every remaining survey-enabled row.
+All rows above are displayed in Price List Item display order in the vertically scrollable form.
 
 ## Target relationship
 
 ```text
-Opportunity -> Region -> Franchise Account -> Default Price List
-                                              |
-                                              +-> Price List Items -> shared Products
+Opportunity -> Opportunity Price List -> Price List Items -> survey-enabled Products
 ```
 
 Region and Franchise are related but not the same record:
@@ -66,7 +64,7 @@ Region and Franchise are related but not the same record:
 - **Price List** controls which products that franchise can sell and the franchise price.
 - **Product** is a shared master item and should not contain a Region lookup.
 
-The survey first uses the Opportunity's standard Price List. If it is blank, the API uses the default Price List of the Franchise Account linked to the Opportunity's Region. Only Price List Items marked **Show in Customer Survey = Yes** are included. The first ten by **Survey Display Order** are shown initially; search and **Show all products** expose the remainder.
+The survey requires the Opportunity's standard Price List. It includes only Price List Items whose related Product has **Show in Customer Survey = Yes**. Every included Product is shown in one vertically scrollable form ordered by **Survey Display Order**.
 
 ## Exact Dataverse configuration
 
@@ -89,34 +87,38 @@ The survey first uses the Opportunity's standard Price List. If it is blank, the
 6. Open the related Franchise Account.
 7. Set the standard **Default Price List** lookup to the newly created Price List and save.
 
-For the immediate pilot, one Price List is enough. Assign that same Price List directly to the pilot Opportunity or as the default on its Franchise Account.
+For the immediate pilot, one Price List is enough. Assign that Price List directly to the pilot Opportunity.
 
-### 3. Verify Price List Item survey columns
+### 3. Verify Product and Price List Item survey columns
 
-Open **Tables** > **Price List Item** > **Columns** and create only any missing columns:
+Open **Tables** > **Product** > **Columns** and create this column if missing:
 
 | Display name | Schema name | Type |
 |---|---|---|
-| Show in Customer Survey | `ht_ShowInCustomerSurvey` | Yes/No; default Yes |
+| Show in Customer Survey | `ht_ShowInCustomerSurvey` | Yes/No; default No |
+
+Open **Tables** > **Price List Item** > **Columns** and create only any missing presentation columns:
+
+| Display name | Schema name | Type |
+|---|---|---|
 | Survey Display Order | `ht_SurveyDisplayOrder` | Whole number |
 | Survey Customer Description | `ht_SurveyCustomerDescription` | Multiline text; 1,000 |
 | Survey Price Display Text | `ht_SurveyPriceDisplayText` | Text; 100 |
 | Survey Price Is Indicative | `ht_SurveyPriceIsIndicative` | Yes/No; default No |
 
-Add these five fields to the Price List Item main form in a **Survey display** section and publish.
+Add the visibility flag to the Product form. Add the four presentation fields to the Price List Item main form in a **Survey display** section and publish.
 
 ### 4. Load Products and franchise prices
 
 1. Deduplicate the Zoho catalogue by approved stable SKU first; use normalized name only where a SKU is absent and the business confirms the records are the same item.
 2. In Dynamics **Products**, create each approved shared Product once.
 3. Populate **Product ID**, **Name**, **Description**, **Default Unit**, and **Default Unit Group**.
-4. Activate the Product.
+4. Set Product **Show in Customer Survey** to **Yes**, then activate the Product.
 5. Open the franchise Price List and add one **Price List Item** for every product sold by that franchise.
 6. Enter that franchise's approved amount and unit.
-7. Set **Show in Customer Survey** to **Yes**.
-8. Set display order `10, 20, 30 ... 100` for the ten common products and `110, 120 ...` for the remaining products.
-9. Use **Survey Price Display Text** for wording such as `From £207.50` or `Price on survey`.
-10. Mark **Survey Price Is Indicative** when staff must review the figure before issuing a quote.
+7. Set display order `10, 20, 30 ...`.
+8. Use **Survey Price Display Text** for wording such as `From £207.50` or `Price on survey`.
+9. Mark **Survey Price Is Indicative** when staff must review the figure before issuing a quote.
 
 Do not import the same Zoho product 100 times merely because 100 Product Owners have copies. The franchise-specific value belongs on its Price List Item.
 
@@ -124,12 +126,10 @@ Do not import the same Zoho product 100 times merely because 100 Product Owners 
 
 1. Open the Opportunity.
 2. Confirm **Region** is populated.
-3. Confirm that Region has **Franchise** populated.
-4. Confirm that Franchise Account has **Default Price List** populated.
-5. Set the Opportunity's standard **Price List** directly for the pilot; this removes fallback ambiguity.
-6. Confirm **Contact**, **Surveyor**, **Survey Start**, **Street Name**, and **Property Postcode** are populated.
-7. Save.
-8. Request a new survey link. Existing links retain their earlier product snapshot and will not pick up a newly changed Price List.
+3. Confirm the Opportunity's standard **Price List** is populated.
+4. Confirm **Contact**, **Surveyor**, **Survey Start**, **Street Name**, and **Property Postcode** are populated.
+5. Save.
+6. Request a new survey link. Existing links retain their earlier product snapshot and will not pick up a newly changed Price List.
 
 ## Migration controls
 

@@ -172,13 +172,18 @@ The current code expects the status key as text. Changing it to a Dataverse Choi
 | Installation Responded On | `ht_InstallationRespondedOn` | Date/time | User local | Read-only |
 | Installation Response Last Error | `ht_InstallationResponseLastError` | Multiline 4,000 | Redacted error | Admin only |
 
-### 5.4 Price List Item fields to create
+### 5.4 Product visibility and Price List Item fields to create
 
-These columns allow each Region to control the catalogue without creating a new configuration table.
+Create this global visibility column on **Product**:
 
 | Display name | Schema name | Type | Purpose |
 |---|---|---|---|
-| Show in Customer Survey | `ht_ShowInCustomerSurvey` | Yes/No, default Yes | Exclude internal or retired entries |
+| Show in Customer Survey | `ht_ShowInCustomerSurvey` | Yes/No, default No | Include an eligible Product in surveys |
+
+Create these presentation columns on **Price List Item**:
+
+| Display name | Schema name | Type | Purpose |
+|---|---|---|---|
 | Survey Display Order | `ht_SurveyDisplayOrder` | Whole number | Stable customer/document ordering |
 | Survey Customer Description | `ht_SurveyCustomerDescription` | Multiline 1,000 | Regional customer-facing wording |
 | Survey Price Display Text | `ht_SurveyPriceDisplayText` | Text 100 | Optional `From`, `per m²`, or `size dependent` label |
@@ -204,7 +209,7 @@ Add only if Operations needs to distinguish customer requests from staff-entered
 4. The Dataverse application user receives:
    - Read: Contact, Region, Account, Product, Unit, Price List and Price List Item.
    - Read/write: Opportunity and Order Confirmation automation fields.
-   - Create/read/write as approved: Appointment and Opportunity Product.
+   - Create/read/write/delete as approved: Opportunity Product and Quote Product; create/read/write Appointment and Quote.
    - No delete permission on Opportunity, Quote, Order or customer records.
 5. Assign one solution/component owner for each form, field, webhook, command and flow.
 
@@ -218,6 +223,7 @@ Perform this before testing the Azure form.
 2. Give every Product a stable product number, name, customer description and default unit.
 3. Create/verify Unit Groups and Units such as Each, metre and square metre.
 4. Do not create separate Product records merely because two Regions charge different prices.
+5. Set **Show in Customer Survey** on each Product that may appear in the form.
 
 ### 7.2 Regional Price Lists
 
@@ -227,23 +233,14 @@ For every Region:
 2. Create/activate the approved Price List in the correct currency.
 3. Add one Price List Item per offered Product/Unit combination.
 4. Set the numeric amount.
-5. Set **Show in Customer Survey**.
-6. Set a unique **Survey Display Order**, preferably in increments of 10.
-7. Add regional customer wording and price qualifier where needed.
-8. Set **Survey Price Is Indicative** for `From`, measured or size-dependent products.
-9. Set the Franchise Account's standard `defaultpricelevelid` to that Price List.
-10. Confirm the Region's `ht_franchise` lookup points to the correct Franchise Account.
+5. Set a unique **Survey Display Order**, preferably in increments of 10.
+6. Add regional customer wording and price qualifier where needed.
+7. Set **Survey Price Is Indicative** for `From`, measured or size-dependent products.
+8. Set this Price List directly on each applicable Opportunity.
 
 ### 7.3 Resolution rule
 
-The API resolves products in this order:
-
-1. Opportunity `pricelevelid`, if populated.
-2. Otherwise Opportunity Region.
-3. Region `ht_franchise`.
-4. Franchise Account `defaultpricelevelid`.
-5. Active Price List Items where `ht_ShowInCustomerSurvey = true`.
-6. Order by `ht_SurveyDisplayOrder`, then Product name.
+The API requires Opportunity `pricelevelid`. It reads that Price List's items, keeps only Products where Product `ht_ShowInCustomerSurvey = true`, and orders them by the Price List Item `ht_SurveyDisplayOrder`, then Product name.
 
 Failure to resolve exactly one approved Price List stops the send and records a safe error. Never fall back to a hard-coded price.
 
@@ -757,8 +754,8 @@ Save the reason, notify Operations and block automatic installation progression.
 ### Phase C — product/price data
 
 1. Clean Products, Units and regional Price Lists.
-2. Link Region to Franchise Account and Account to Default Price List.
-3. Configure inclusion, display order, wording and indicative flags.
+2. Assign the correct Price List directly to each Opportunity.
+3. Configure Product inclusion plus Price List Item display order, wording and indicative flags.
 4. Reconcile prices against the approved old regional document.
 
 **Exit:** one API query returns the exact expected catalogue for each test Region.
@@ -893,4 +890,3 @@ Do not exchange production secrets in chat, email, source control or Jira.
 - Outlook Adaptive Cards and `Action.Http`: https://learn.microsoft.com/outlook/actionable-messages/adaptive-card
 - Entra authentication for Actionable Messages: https://learn.microsoft.com/outlook/actionable-messages/enable-entra-token-for-actionable-messages
 - Azure Static Web Apps plans: https://learn.microsoft.com/azure/static-web-apps/plans
-

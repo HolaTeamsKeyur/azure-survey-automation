@@ -18,19 +18,21 @@ test("renders the surveyor-facing property workflow without demo content", () =>
   });
 
   assert.match(html, /Property survey/);
-  assert.match(html, /Franchise catalogue/);
+  assert.match(html, /Customer survey worksheet/);
   assert.match(html, /Jamie Taylor/);
   assert.match(html, /Access4Lofts Brighton/);
   assert.match(html, /Brighton Region/);
   assert.match(html, /value="Semi-detached"/);
   assert.match(html, /value="1930s"/);
   assert.match(html, /Loft boarding/);
+  assert.match(html, /name="selected_44444444-4444-4444-8444-444444444444"/);
   assert.match(html, /name="quantity_44444444-4444-4444-8444-444444444444"/);
+  assert.match(html, /from this Opportunity's Price List/);
   assert.doesNotMatch(html, /Request a product/);
   assert.doesNotMatch(html, /mock mode|control room|sample record|Adaptive Card|customer enquiry form/i);
 });
 
-test("shows only the first ten regional products initially", () => {
+test("shows every Opportunity Price List product in one scrollable form", () => {
   const products = Array.from({ length: 12 }, (_, index) => ({
     productId: `${String(index + 1).padStart(8, "0")}-1111-4111-8111-111111111111`,
     unitId: "55555555-5555-4555-8555-555555555555",
@@ -50,8 +52,8 @@ test("shows only the first ten regional products initially", () => {
     },
     products
   });
-  assert.match(html, /Showing 10 of 12 products/);
-  assert.match(html, /Show all products/);
-  assert.match(html, /data-product-index="9"[^>]*>/);
-  assert.match(html, /data-product-index="10"[^>]* hidden>/);
+  assert.match(html, /Showing 12 survey-enabled products/);
+  assert.doesNotMatch(html, /Show all products|product-search| hidden/);
+  assert.equal((html.match(/class="product-row/g) ?? []).length, 12);
+  assert.match(html, /\.field-list\{display:flex;flex-direction:column/);
 });

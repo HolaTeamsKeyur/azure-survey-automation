@@ -39,7 +39,7 @@ Minimum privileges:
 
 - Organisation read: Account, Contact, Product, Unit, Price List, Price List Item, Transaction Currency, System User.
 - Organisation read/write: Opportunity.
-- Organisation create/read/write: Opportunity Product, Quote, Quote Product, Survey Product Request.
+- Organisation create/read/write/delete: Opportunity Product and Quote Product. Organisation create/read/write: Quote and Survey Product Request.
 - Organisation read: Region and Survey Template custom tables.
 - Append/Append To where required by Opportunity/Product/Unit relationships.
 - Permission to invoke `GenerateQuoteFromOpportunity` through the normal Dataverse API.
@@ -111,7 +111,7 @@ Add the table to the `Survey Configuration` area. Create one default active reco
 
 A Region-specific active template overrides the default. Administrators can safely reorder, rename, show or hide known sections; arbitrary HTML or JavaScript is never accepted. Keep `review` present. This is the supported layout configuration point; a drag-and-drop designer can be added later without changing the data contract.
 
-## 5. Opportunity and regional catalogue
+## 5. Opportunity and product catalogue
 
 On the Opportunity main form require:
 
@@ -119,10 +119,10 @@ On the Opportunity main form require:
 - Region
 - Surveyor (lookup to User)
 - Survey Start and Survey Finish
-- Price List, or Region/Franchise with a Default Price List
+- Price List (required; the automation does not fall back to the Region/Franchise default)
 - `Send Survey Requested On` command field used by the command-bar button
 
-For each regional Price List Item, set `Show in Customer Survey = Yes` (the legacy schema name is retained) and complete display order, survey description, display price text and indicative-price flag. Despite the legacy field name, the catalogue is now shown to the surveyor.
+On each Product that may appear in a survey, set Product `Show in Customer Survey` (`ht_ShowInCustomerSurvey`) to Yes. On each Opportunity Price List Item, complete display order, survey description, display price text and indicative-price flag. A row appears only when the Product flag is Yes and the Product has a Price List Item on that Opportunity's Price List.
 
 ## 6. Power Automate: send the surveyor link
 
@@ -192,8 +192,8 @@ Keep the existing Dataverse URL, public base URL and token/ingress secrets. Rota
 2. Set Contact, Region, Surveyor, survey dates and resolved Price List.
 3. Trigger Flow 1. Confirm the email goes to the Surveyor, never the Contact.
 4. Open in a private browser. Sign in as a different tenant/user and confirm access is denied; sign in as the assigned surveyor and confirm access.
-5. Confirm customer, address, appointment and regional products are prefilled.
-6. Submit catalogue products only. Confirm Opportunity Products and one draft Quote are created.
+5. Confirm customer, address and appointment are prefilled, and only flagged Products from the Opportunity Price List are shown.
+6. Submit catalogue products only. Confirm the Opportunity Products and draft Quote Products contain exactly the selected rows; confirm a previously unselected line is removed.
 7. Repeat with a new Opportunity and add a non-catalogue request. Confirm Opportunity Products are saved, a pending Survey Product Request is created, and no Quote exists.
 8. Map and approve the request. Confirm the approval flow adds the line once and creates one Quote.
 9. Change the Region template section order and confirm a newly opened survey follows that layout.

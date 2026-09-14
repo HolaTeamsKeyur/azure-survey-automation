@@ -106,19 +106,24 @@ Open **Tables** > **Order** > **Schema** > **Columns** and use the same **New co
 | Installation Responded On | `ht_InstallationRespondedOn` | Date and time; User local | Yes | Visible, read-only |
 | Installation Response Last Error | `ht_InstallationResponseLastError` | Multiline text; 4,000 characters | Yes | Admin only; secure |
 
-## 5. Create the Price List Item columns
+## 5. Create the Product and Price List Item columns
 
-Open **Tables** > **Price List Item** > **Schema** > **Columns**. These fields control the dynamic product rows in the survey. They replace hard-coded regional rows in the old Word files.
+Open **Tables** > **Product** > **Schema** > **Columns** and create the global visibility flag:
 
 | Display name | Schema name | Data type and settings | Default | Audit |
 |---|---|---|---|---|
-| Show in Customer Survey | `ht_ShowInCustomerSurvey` | Yes/No | Yes | Yes |
+| Show in Customer Survey | `ht_ShowInCustomerSurvey` | Yes/No | No | Yes |
+
+Then open **Tables** > **Price List Item** > **Schema** > **Columns**. These fields control Price-List-specific presentation and replace hard-coded regional rows in the old Word files.
+
+| Display name | Schema name | Data type and settings | Default | Audit |
+|---|---|---|---|---|
 | Survey Display Order | `ht_SurveyDisplayOrder` | Whole number; minimum 0; maximum 100,000 | blank | Yes |
 | Survey Customer Description | `ht_SurveyCustomerDescription` | Multiline text; 1,000 characters | blank | Yes |
 | Survey Price Display Text | `ht_SurveyPriceDisplayText` | Text; 100 characters | blank | Yes |
 | Survey Price Is Indicative | `ht_SurveyPriceIsIndicative` | Yes/No | No | Yes |
 
-Do not add region columns directly to Product. The regional Price List determines whether a Product is offered and what price applies.
+Do not add region columns directly to Product. The Product flag controls global survey visibility; the Opportunity Price List determines whether that Product is offered and what price applies.
 
 ## 6. Opportunity Products created by submission
 
@@ -177,7 +182,7 @@ The automation creates **Opportunity Products**, not Quote lines. Staff can revi
 1. Open **Price List Item** > **Forms** and edit the form used by product administrators.
 2. Add a section named **Customer Survey Display**.
 3. Add all five fields from section 5.
-4. Put **Show in Customer Survey** and **Survey Display Order** first because administrators use them most often.
+4. Put **Survey Display Order** first because administrators use it most often. Put **Show in Customer Survey** on the Product form instead.
 5. Select **Save and publish**.
 
 ## 10. Upload the JavaScript web resource
@@ -259,7 +264,8 @@ Use a single Product master and one standard Price List per commercial region/fr
 1. In the Sales app, open **Products**.
 2. Create or deduplicate each sellable Product once.
 3. Give each Product a stable Product ID/number, customer-facing name, default unit and unit group.
-4. Activate the Product.
+4. Set **Show in Customer Survey** to Yes when the Product may be selected on surveys.
+5. Activate the Product.
 
 ### Regional Price Lists
 
@@ -270,14 +276,13 @@ For every region, such as Bristol or Manchester:
 3. Add a Price List Item for every Product offered in that region.
 4. Enter the approved regional amount and pricing method.
 5. On **Customer Survey Display**, set:
-   - **Show in Customer Survey** = Yes only when the customer may select it.
    - **Survey Display Order** = 10, 20, 30 and so on, leaving gaps for additions.
    - **Survey Customer Description** = approved regional wording, or blank to use the Product description.
    - **Survey Price Display Text** = optional wording such as `From £120` or `Price on survey`; leave blank to display the actual Price List amount.
    - **Survey Price Is Indicative** = Yes when the displayed value is not a binding quote.
-6. Set **Show in Customer Survey** = No rather than deleting an item that should disappear from new surveys.
+6. Set the Product's **Show in Customer Survey** flag to No to hide it from every new survey, or remove its Price List Item to hide it only from Opportunities using that Price List.
 
-Link the Opportunity's Region to the correct franchise/account and ensure that record resolves to the correct default Price List. The Azure request takes an immutable product/price snapshot when the email is generated, so later price changes do not alter a customer's already-issued form.
+Set the correct Price List directly on the Opportunity. The Azure request takes an immutable product/price snapshot when the email is generated, so later price changes do not alter an already-issued form.
 
 ### Data reconciliation
 
