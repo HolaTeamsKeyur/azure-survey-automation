@@ -92,6 +92,20 @@ test("submission clears Opportunity Products and sends selections only to the Qu
   assert.equal((quoteSelection as Array<{ productId: string }>)[0].productId, product.productId);
   assert.equal(savedPatch.ht_surveyselectedproductids, product.productId);
   assert.equal(savedPatch.ht_surveypropertytype, "Semi-detached");
+  assert.equal(savedPatch.ht_surveyautomationlasterror, null);
   assert.equal(result.quoteId, "99999999-9999-4999-8999-999999999999");
   assert.equal(finalExpectedVersion, undefined);
+});
+
+test("records a survey processing failure on the Opportunity with its reference", async () => {
+  let savedPatch: Record<string, unknown> = {};
+  const dataverse = {
+    updateSession: async (_id: string, patch: Record<string, unknown>) => { savedPatch = patch; }
+  } as unknown as DataverseClient;
+  const service = new SurveyAutomationService(config(), dataverse, {} as GraphClient);
+
+  await service.recordSurveyFailure(session.opportunityId, new Error("Quote Product creation failed"), "error-reference-123");
+
+  assert.match(String(savedPatch.ht_surveyautomationlasterror), /Reference: error-reference-123/);
+  assert.match(String(savedPatch.ht_surveyautomationlasterror), /Quote Product creation failed/);
 });

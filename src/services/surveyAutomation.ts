@@ -168,6 +168,7 @@ export class SurveyAutomationService {
 
     const commonPatch = {
       ht_surveyautomationstatuskey: submission.response,
+      ht_surveyautomationlasterror: null,
       ht_surveyresponsereason: submission.reason ?? null,
       ht_surveyfeedbackscore: submission.feedbackScore ?? null,
       ht_surveyfeedbackcomments: submission.feedbackComments ?? null,
@@ -214,6 +215,11 @@ export class SurveyAutomationService {
       ht_surveyproductreviewstatuskey: newProductRequests.length ? "pending_approval" : "applied"
     });
     return { status: "accepted", productCount: selected.length, requestedProductCount: newProductRequests.length, quoteId: quote?.quoteId };
+  }
+
+  async recordSurveyFailure(opportunityId: string, error: unknown, reference: string): Promise<void> {
+    const message = `${new Date().toISOString()} | Reference: ${reference} | ${safeError(error)}`.slice(0, 4000);
+    await this.dataverse.updateSession(opportunityId, { ht_surveyautomationlasterror: message });
   }
 
   async getSurveyForm(tokenClaims: SurveyTokenClaims): Promise<{

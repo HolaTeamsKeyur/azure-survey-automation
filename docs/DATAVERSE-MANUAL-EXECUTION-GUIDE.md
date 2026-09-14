@@ -58,7 +58,7 @@ Open **Objects** > **Tables** > **Opportunity** > **Schema** > **Columns**. For 
 | Survey Feedback Comments | `ht_SurveyFeedbackComments` | Multiline text; 4,000 characters | Yes | Visible, read-only |
 | Survey Responded On | `ht_SurveyRespondedOn` | Date and time; User local | Yes | Visible, read-only |
 | Survey Document Reference | `ht_SurveyDocumentReference` | Text; 500 characters | Yes | Visible, read-only; secure |
-| Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiline text; 4,000 characters | Yes | Admin only; secure |
+| Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiline text; 4,000 characters | Yes | Visible and locked in Survey Automation |
 
 Create these additional **Opportunity** columns for the actual Survey and Quotation Form. They store the form shown in the existing Access4Lofts template:
 
@@ -168,9 +168,10 @@ The Opportunity contains sales and survey context but no product lines. Staff re
    - Survey Feedback Score
    - Survey Feedback Comments
    - Survey Document Reference
+   - Survey Automation Last Error
 5. Select each control and enable its read-only/locked property. This is user-interface protection only; section 11 provides real column security.
 6. Keep the section collapsed by default if the normal sales form is already crowded.
-7. Do not add Token ID, Allowed Product IDs, Products Snapshot, Selection Snapshot or Last Error to the normal sales form.
+7. Do not add Token ID, Allowed Product IDs, Products Snapshot or Selection Snapshot to the normal sales form. Keep Last Error visible but locked in this internal Survey Automation section.
 8. Do not add an Opportunity Products review subgrid for this workflow. Add the related Quotes subgrid and review lines from the Quote Product form.
 9. Select **Save and publish**.
 

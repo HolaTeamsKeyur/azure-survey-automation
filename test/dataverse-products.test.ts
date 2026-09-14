@@ -129,6 +129,7 @@ test("saves only optional Opportunity survey columns that exist in Dataverse", a
       return new Response(JSON.stringify({
         value: [
           { LogicalName: "ht_surveypropertytype" },
+          { LogicalName: "ht_surveyautomationlasterror" },
           { LogicalName: "ht_surveyautomationstatuskey" }
         ]
       }), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -142,6 +143,7 @@ test("saves only optional Opportunity survey columns that exist in Dataverse", a
       {
         ht_surveyaddress: "10 Test Road",
         ht_surveypropertytype: "Semi-detached",
+        ht_surveyautomationlasterror: "Reference: test",
         ht_surveyautomationstatuskey: "submitted"
       }
     );
@@ -154,6 +156,7 @@ test("saves only optional Opportunity survey columns that exist in Dataverse", a
   const body = JSON.parse(String(update.init?.body));
   assert.equal(body.ht_surveyaddress, undefined);
   assert.equal(body.ht_surveypropertytype, "Semi-detached");
+  assert.equal(body.ht_surveyautomationlasterror, "Reference: test");
   assert.equal(body.ht_surveyautomationstatuskey, "submitted");
 });
 

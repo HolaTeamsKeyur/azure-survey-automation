@@ -22,6 +22,7 @@ Production-oriented Dynamics 365 / Dataverse property survey workflow.
 - Power Automate: Office 365 Outlook connector sends survey and installation messages.
 - Survey link: stable Opportunity GUID route protected by Entra tenant and assigned-email checks; a short-lived signed token is generated internally for submission and is not exposed in the emailed URL.
 - Browser resilience: in-page submission keeps failures on the form, and same-tab draft recovery restores unsaved entries after an accidental refresh.
+- Internal failure visibility: survey submission errors are written to the Opportunity's `ht_SurveyAutomationLastError` field with the on-screen reference ID and are cleared after a successful submission; no failure email is sent.
 - Automation ingress: separate rotating header secret.
 - Submitted product IDs: restricted to the immutable session snapshot.
 

@@ -154,7 +154,7 @@ Before creating a column, search by both display name and logical name and reuse
 | Survey Feedback Comments | `ht_SurveyFeedbackComments` | Multiline 4,000 | Customer feedback | Read-only |
 | Survey Responded On | `ht_SurveyRespondedOn` | Date/time | User local | Read-only |
 | Survey Document Reference | `ht_SurveyDocumentReference` | Text 500 | Optional private document/blob reference | Read-only |
-| Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiline 4,000 | Redacted technical error | Admin only |
+| Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiline 4,000 | Timestamp, reference ID and processing error; cleared after success | Internal read-only |
 
 The current code expects the status key as text. Changing it to a Dataverse Choice is a valid later hardening change, but requires mapping numeric values in the API first.
 
@@ -203,7 +203,7 @@ Add only if Operations needs to distinguish customer requests from staff-entered
 ## 6. Security, auditing and ownership
 
 1. Enable auditing on request timestamps, recipient, status, expiry, selected products, reasons and response timestamps.
-2. Apply field security to token ID, allowed IDs, JSON snapshots, document reference and last-error fields.
+2. Apply field security to token ID, allowed IDs, JSON snapshots and document reference. Show Last Error read-only to internal users in Survey Automation.
 3. Normal sales users receive read access to automation status and response fields, but not token/snapshot fields.
 4. The Dataverse application user receives:
    - Read: Contact, Region, Account, Product, Unit, Price List and Price List Item.
@@ -259,7 +259,8 @@ Failure to resolve exactly one approved Price List stops the send and records a 
    - Survey Feedback Score
    - Survey Feedback Comments
    - Survey Responded On
-3. Keep token ID, allowed IDs, JSON snapshots and last error off the normal form.
+   - Survey Automation Last Error
+3. Keep token ID, allowed IDs and JSON snapshots off the normal form. Keep Last Error visible but locked in the internal automation section.
 4. Do not add an Opportunity Products subgrid for this workflow. Add the related Quotes subgrid and review products inside the draft Quote.
 5. Create a Quote Product view **Customer-requested products pending review** if the optional audit columns are used.
 6. Publish and test with Sales and Surveyor personas, not only System Administrator.

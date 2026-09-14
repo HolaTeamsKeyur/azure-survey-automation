@@ -9,6 +9,7 @@ import type { NewProductRequest } from "../domain/models.js";
 
 async function handler(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
   const requestId = correlationId(request);
+  let recordFailure: ((error: unknown) => Promise<void>) | undefined;
   try {
     const config = loadConfig();
     const token = String(request.params.token ?? "");
@@ -26,6 +27,8 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
       }
       return { status: 200, headers: surveyPageHeaders(requestId), body: renderSurveyForm({ token, draftId: model.session.tokenId, context: model.context, scheduledStart: model.session.scheduledStart, products: model.products, layout: model.layout, enableNewProductRequests: config.enableNewProductRequests }) };
     }
+
+    recordFailure = error => service.recordSurveyFailure(model.session.opportunityId, error, requestId);
 
     const form = await request.formData();
     const productSelections = model.products
@@ -55,6 +58,13 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
     return { status: 303, headers: { ...surveyPageHeaders(requestId), "Location": nextUrl }, body: renderSurveyThanks(result.productCount, result.requestedProductCount, result.quoteId) };
   } catch (error) {
     context.error(`Survey form request failed. Correlation ID: ${requestId}`, error);
+    if (recordFailure) {
+      try {
+        await recordFailure(error);
+      } catch (recordingError) {
+        context.error(`Survey failure could not be written to the Opportunity. Correlation ID: ${requestId}`, recordingError);
+      }
+    }
     if (wantsJson(request)) {
       const status = error instanceof SurveyorAccessError ? 403 : 400;
       return {

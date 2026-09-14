@@ -29,7 +29,7 @@ Do not add all table assets. Use **Add existing > Table > Select components** an
 | Survey Feedback Score | `ht_SurveyFeedbackScore` | Whole number | Min 1, max 5 | Read-only |
 | Survey Feedback Comments | `ht_SurveyFeedbackComments` | Multiple lines text | 4,000 | Read-only |
 | Survey Responded On | `ht_SurveyRespondedOn` | Date and time | User local | Read-only |
-| Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiple lines text | 4,000 | Admin form only |
+| Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiple lines text | 4,000 | Survey Automation section, read-only |
 
 Existing Opportunity columns used by the automation—do not recreate them:
 
@@ -80,7 +80,7 @@ Add a collapsed section named **Customer Survey Automation** below the existing 
 7. Survey Feedback Comments
 8. Survey Responded On
 
-Keep all fields read-only for ordinary sales users. Do not display token ID, allowed IDs, snapshot JSON or last error on the normal form.
+Keep all fields read-only for ordinary sales users. Do not display token ID, allowed IDs or snapshot JSON on the normal form. Display Last Error only in the internal Survey Automation section.
 
 ### Order Confirmation form
 

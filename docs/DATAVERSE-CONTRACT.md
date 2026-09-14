@@ -91,7 +91,7 @@ These are columns, not tables. Before adding one, confirm that an equivalent col
 | Survey Feedback Score | `ht_SurveyFeedbackScore` | Whole number 1-5 | Optional |
 | Survey Feedback Comments | `ht_SurveyFeedbackComments` | Multiline text | Optional |
 | Survey Responded On | `ht_SurveyRespondedOn` | Date/time | Audit timestamp |
-| Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiline text | Redacted technical message |
+| Survey Automation Last Error | `ht_SurveyAutomationLastError` | Multiline text 4,000 | Internal timestamp, survey reference ID and processing error; cleared after success |
 
 ## Columns added to existing Order Confirmation
 
@@ -121,6 +121,6 @@ For this demonstration, time zone, duration and business hours are Azure applica
 
 - Application user: read Lead/Enquiry, Contact, Region, Account, Product, Price List and Price List Item; read/write Opportunity and Order Confirmation; create/read Appointment.
 - Sales users: read response fields; update only fields appropriate to their role.
-- Field security: token ID, snapshot JSON and last-error fields.
+- Field security: token ID and snapshot JSON fields. Last Error is visible read-only to internal users in the Survey Automation section.
 - Enable auditing on schedules, status, recipient, selected products, reasons and timestamps.
 - Never store signed customer tokens or access tokens in Dataverse.

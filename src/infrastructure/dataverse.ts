@@ -15,6 +15,7 @@ import { normalizeGuid } from "../domain/rules.js";
 import { parseSurveyLayout, type SurveyLayout } from "../domain/surveyLayout.js";
 
 const OPTIONAL_OPPORTUNITY_SURVEY_COLUMNS = [
+  "ht_surveyautomationlasterror",
   "ht_surveyaddress",
   "ht_surveypropertytype",
   "ht_surveypropertyage",
@@ -61,6 +62,7 @@ const OPTIONAL_LEAD_ENQUIRY_COLUMN_SET = new Set<string>(OPTIONAL_OPPORTUNITY_EN
 
 export class DataverseClient {
   private opportunitySurveyColumnsPromise?: Promise<Set<string>>;
+  private opportunitySurveyColumnsLoadedAt = 0;
   private leadEnquiryColumnsPromise?: Promise<Set<string>>;
 
   constructor(
@@ -91,7 +93,10 @@ export class DataverseClient {
   }
 
   private getAvailableOpportunitySurveyColumns(): Promise<Set<string>> {
-    this.opportunitySurveyColumnsPromise ??= this.loadAvailableOpportunitySurveyColumns();
+    if (!this.opportunitySurveyColumnsPromise || Date.now() - this.opportunitySurveyColumnsLoadedAt > 30_000) {
+      this.opportunitySurveyColumnsLoadedAt = Date.now();
+      this.opportunitySurveyColumnsPromise = this.loadAvailableOpportunitySurveyColumns();
+    }
     return this.opportunitySurveyColumnsPromise;
   }
 
@@ -484,6 +489,7 @@ export class DataverseClient {
     const headers: Record<string, string> = {};
     if (expectedVersion) headers["If-Match"] = `W/\"${expectedVersion}\"`;
     const compatiblePatch = await this.removeUnavailableOpportunitySurveyColumns(patch);
+    if (!Object.keys(compatiblePatch).length) return;
     await this.request(`opportunities(${normalizeGuid(sessionId)})`, {
       method: "PATCH",
       headers,
@@ -492,7 +498,10 @@ export class DataverseClient {
   }
 
   async setSessionStatus(sessionId: string, status: SurveySessionStatus, expectedVersion?: number): Promise<void> {
-    await this.updateSession(sessionId, { ht_surveyautomationstatuskey: status }, expectedVersion);
+    await this.updateSession(sessionId, {
+      ht_surveyautomationstatuskey: status,
+      ...(status === "failed" ? {} : { ht_surveyautomationlasterror: null })
+    }, expectedVersion);
   }
 
   async getSession(sessionId: string): Promise<SurveySession> {

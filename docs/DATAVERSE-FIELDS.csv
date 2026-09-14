@@ -11,7 +11,7 @@ Opportunity,Survey Response Reason,ht_SurveyResponseReason,Multiline 4000,Yes,Re
 Opportunity,Survey Feedback Score,ht_SurveyFeedbackScore,Whole Number 1-5,Yes,Read-only
 Opportunity,Survey Feedback Comments,ht_SurveyFeedbackComments,Multiline 4000,Yes,Read-only
 Opportunity,Survey Responded On,ht_SurveyRespondedOn,DateTime UserLocal,Yes,Read-only
-Opportunity,Survey Automation Last Error,ht_SurveyAutomationLastError,Multiline 4000,Yes,Admin only
+Opportunity,Survey Automation Last Error,ht_SurveyAutomationLastError,Multiline 4000,Yes,Survey Automation read-only
 Opportunity,Survey Address,ht_SurveyAddress,Multiline 500,Yes,Survey Details
 Opportunity,Survey Property Type,ht_SurveyPropertyType,Text 250,Yes,Survey Details
 Opportunity,Survey Property Age,ht_SurveyPropertyAge,Text 250,Yes,Survey Details
