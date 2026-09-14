@@ -37,6 +37,7 @@ test("resolves franchise identity, Opportunity Price List and prefilled survey d
   const opportunityCall = calls.find(url => url.includes("/opportunities("));
   assert.ok(opportunityCall);
   assert.doesNotMatch(opportunityCall, /ht_surveyaddress/);
+  assert.doesNotMatch(opportunityCall, /leadsourcecode/);
 });
 
 test("prefills missing Opportunity survey fields from the originating Enquiry and persists them", async () => {
@@ -49,7 +50,10 @@ test("prefills missing Opportunity survey fields from the originating Enquiry an
         { LogicalName: "ht_surveyaddress" }, { LogicalName: "ht_surveypropertytype" }, { LogicalName: "ht_surveypropertyage" },
         { LogicalName: "ht_surveyadvertisingsource" }, { LogicalName: "ht_surveyexistinghatchtype" }, { LogicalName: "ht_surveyflooringrequired" },
         { LogicalName: "ht_surveyladderrequired" }, { LogicalName: "ht_surveylightrequired" }, { LogicalName: "ht_surveyinsulationrequired" },
-        { LogicalName: "ht_surveyotherinformation" }
+        { LogicalName: "ht_surveyotherinformation" }, { LogicalName: "ht_streetname" }, { LogicalName: "ht_propertypostcode" },
+        { LogicalName: "ht_propertytype" }, { LogicalName: "ht_propertyage" }, { LogicalName: "ht_existinghatchtype" },
+        { LogicalName: "ht_loftboardingrequired" }, { LogicalName: "ht_loftladderrequired" }, { LogicalName: "ht_lightrequired" },
+        { LogicalName: "ht_insulationrequired" }
       ] }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
     if (url.includes("/opportunities(") && init?.method === "PATCH") return new Response(null, { status: 204 });
@@ -101,7 +105,8 @@ test("prefills missing Opportunity survey fields from the originating Enquiry an
   assert.equal(patchBody.ht_propertypostcode, "BN1 1AA");
   assert.equal(patchBody.ht_propertytype, 1);
   assert.equal(patchBody.ht_lightrequired, true);
-  assert.equal(patchBody.leadsourcecode, 4);
+  assert.equal(patchBody.leadsourcecode, undefined);
+  assert.equal(patchBody.ht_surveyadvertisingsource, "Website");
 });
 
 test("saves only optional Opportunity survey columns that exist in Dataverse", async () => {

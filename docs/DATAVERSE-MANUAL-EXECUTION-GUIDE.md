@@ -96,12 +96,12 @@ After saving, open each column once and verify its lower-case logical name match
 
 1. Open **Tables > Lead (Enquiry) > Relationships**.
 2. Open the relationship that creates the originating Opportunity (normally `opportunity_originating_lead`). If the modern designer does not expose mappings, choose **Switch to classic** for this relationship.
-3. Open **Mappings** and add these source-to-target pairs: `ht_streetname`, `ht_propertypostcode`, `ht_propertytype`, `ht_propertyage`, `ht_existinghatchtype`, `ht_loftboardingrequired`, `ht_loftladderrequired`, `ht_lightrequired`, `ht_insulationrequired`, and `leadsourcecode`; each maps to the same logical name on Opportunity.
+3. Open **Mappings** and add these source-to-target pairs: `ht_streetname`, `ht_propertypostcode`, `ht_propertytype`, `ht_propertyage`, `ht_existinghatchtype`, `ht_loftboardingrequired`, `ht_loftladderrequired`, `ht_lightrequired`, and `ht_insulationrequired`; each maps to the same logical name on Opportunity.
 4. Confirm each pair has a compatible data type. Do not map a Choice directly into a Text field.
 5. Save and publish all customisations.
 6. Qualify a new disposable Enquiry and verify the values appear on its Opportunity before requesting the survey.
 
-The Azure API also reads `originatingleadid` when any supported Opportunity value is blank. It fills the survey and backfills only missing Opportunity values; it never replaces a value already changed on the Opportunity.
+Do not add a `leadsourcecode` mapping: this Opportunity table does not contain that column. The Azure API reads Lead Source from `originatingleadid`, displays its formatted label in the survey, and saves that label to `ht_surveyadvertisingsource` when the optional survey column exists. For all supported values it backfills only missing Opportunity fields; it never replaces a value already changed on the Opportunity.
 
 ## 4. Create the Order columns
 

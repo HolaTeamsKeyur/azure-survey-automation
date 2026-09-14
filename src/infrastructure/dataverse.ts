@@ -40,7 +40,23 @@ const OPTIONAL_OPPORTUNITY_SURVEY_COLUMNS = [
   "ht_surveyadditionalinfo"
 ] as const;
 
-const OPTIONAL_OPPORTUNITY_SURVEY_COLUMN_SET = new Set<string>(OPTIONAL_OPPORTUNITY_SURVEY_COLUMNS);
+const OPTIONAL_OPPORTUNITY_ENQUIRY_COLUMNS = [
+  "ht_propertypostcode",
+  "ht_streetname",
+  "ht_propertytype",
+  "ht_propertyage",
+  "ht_existinghatchtype",
+  "ht_loftboardingrequired",
+  "ht_loftladderrequired",
+  "ht_lightrequired",
+  "ht_insulationrequired"
+] as const;
+
+const OPTIONAL_OPPORTUNITY_CONTEXT_COLUMNS = [
+  ...OPTIONAL_OPPORTUNITY_SURVEY_COLUMNS,
+  ...OPTIONAL_OPPORTUNITY_ENQUIRY_COLUMNS
+] as const;
+const OPTIONAL_OPPORTUNITY_CONTEXT_COLUMN_SET = new Set<string>(OPTIONAL_OPPORTUNITY_CONTEXT_COLUMNS);
 
 export class DataverseClient {
   private opportunitySurveyColumnsPromise?: Promise<Set<string>>;
@@ -86,12 +102,12 @@ export class DataverseClient {
         result.value
           .map(attribute => attribute.LogicalName?.toLowerCase())
           .filter((name): name is string =>
-            typeof name === "string" && OPTIONAL_OPPORTUNITY_SURVEY_COLUMN_SET.has(name)
+            typeof name === "string" && OPTIONAL_OPPORTUNITY_CONTEXT_COLUMN_SET.has(name)
           )
       );
     } catch {
       // Metadata access is not essential. If the application user cannot read
-      // metadata, omit the optional survey-detail columns and use legacy fields.
+      // metadata, omit optional Opportunity fields and use the originating Lead.
       return new Set<string>();
     }
   }
@@ -102,7 +118,7 @@ export class DataverseClient {
     const available = await this.getAvailableOpportunitySurveyColumns();
     return Object.fromEntries(
       Object.entries(patch).filter(([name]) =>
-        !OPTIONAL_OPPORTUNITY_SURVEY_COLUMN_SET.has(name.toLowerCase()) || available.has(name.toLowerCase())
+        !OPTIONAL_OPPORTUNITY_CONTEXT_COLUMN_SET.has(name.toLowerCase()) || available.has(name.toLowerCase())
       )
     );
   }
@@ -110,12 +126,11 @@ export class DataverseClient {
   async getOpportunityContext(opportunityId: string): Promise<OpportunityContext> {
     const id = normalizeGuid(opportunityId);
     const availableSurveyColumns = await this.getAvailableOpportunitySurveyColumns();
-    const optionalSelect = OPTIONAL_OPPORTUNITY_SURVEY_COLUMNS
+    const optionalSelect = OPTIONAL_OPPORTUNITY_CONTEXT_COLUMNS
       .filter(name => availableSurveyColumns.has(name))
       .join(",");
     const row = await this.request<Record<string, unknown>>(
-      `opportunities(${id})?$select=opportunityid,name,ht_propertypostcode,ht_streetname,ht_surveystart,ht_surveyfinish,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_transactioncurrencyid_value,_ht_surveyor_value,_originatingleadid_value,leadsourcecode,` +
-      `ht_propertytype,ht_propertyage,ht_existinghatchtype,ht_loftboardingrequired,ht_loftladderrequired,ht_lightrequired,ht_insulationrequired` +
+      `opportunities(${id})?$select=opportunityid,name,ht_surveystart,ht_surveyfinish,_parentcontactid_value,_ht_region_value,_pricelevelid_value,_transactioncurrencyid_value,_ht_surveyor_value,_originatingleadid_value` +
       `${optionalSelect ? `,${optionalSelect}` : ""}&` +
       `$expand=parentcontactid($select=contactid,fullname,emailaddress1,mobilephone),ht_Region($select=ht_regionid,ht_name,ht_regioncode,ht_email,ht_telephone,_ht_franchise_value)`
     );
@@ -159,7 +174,8 @@ export class DataverseClient {
       address: stringOrUndefined(row.ht_surveyaddress) ?? ([streetName, propertyPostcode].filter(Boolean).join(", ") || undefined),
       propertyType: stringOrUndefined(row.ht_surveypropertytype) ?? formattedFrom(row, enquiry, "ht_propertytype"),
       propertyAge: stringOrUndefined(row.ht_surveypropertyage) ?? formattedFrom(row, enquiry, "ht_propertyage"),
-      advertisingSource: stringOrUndefined(row.ht_surveyadvertisingsource) ?? formattedFrom(row, enquiry, "leadsourcecode"),
+      advertisingSource: stringOrUndefined(row.ht_surveyadvertisingsource)
+        ?? (enquiry ? formattedOrRaw(enquiry, "leadsourcecode") : undefined),
       existingHatchType: stringOrUndefined(row.ht_surveyexistinghatchtype) ?? formattedFrom(row, enquiry, "ht_existinghatchtype"),
       flooringRequired: stringOrUndefined(row.ht_surveyflooringrequired) ?? formattedBooleanFrom(row, enquiry, "ht_loftboardingrequired"),
       ladderRequired: stringOrUndefined(row.ht_surveyladderrequired) ?? formattedBooleanFrom(row, enquiry, "ht_loftladderrequired"),
@@ -180,7 +196,7 @@ export class DataverseClient {
       planNotes: stringOrUndefined(row.ht_surveyplannotes),
       additionalInfo: stringOrUndefined(row.ht_surveyadditionalinfo)
     };
-    const enquiryBackfill = enquiryOpportunityBackfill(row, enquiry, streetName, propertyPostcode);
+    const enquiryBackfill = enquiryOpportunityBackfill(row, enquiry, streetName, propertyPostcode, availableSurveyColumns);
     const surveyBackfill = opportunitySurveyBackfill(row, surveyDetails, availableSurveyColumns);
     const opportunityBackfill = { ...enquiryBackfill, ...surveyBackfill };
     if (Object.keys(opportunityBackfill).length) {
@@ -692,7 +708,8 @@ function enquiryOpportunityBackfill(
   opportunity: Record<string, unknown>,
   enquiry: Record<string, unknown> | undefined,
   streetName: string | undefined,
-  propertyPostcode: string | undefined
+  propertyPostcode: string | undefined,
+  availableColumns: ReadonlySet<string>
 ): Record<string, unknown> {
   if (!enquiry) return {};
   const candidates: Record<string, unknown> = {
@@ -704,11 +721,11 @@ function enquiryOpportunityBackfill(
     ht_loftboardingrequired: enquiry.ht_loftboardingrequired,
     ht_loftladderrequired: enquiry.ht_loftladderrequired,
     ht_lightrequired: enquiry.ht_lightrequired,
-    ht_insulationrequired: enquiry.ht_insulationrequired,
-    leadsourcecode: enquiry.leadsourcecode
+    ht_insulationrequired: enquiry.ht_insulationrequired
   };
   return Object.fromEntries(Object.entries(candidates).filter(([logicalName, value]) =>
-    (opportunity[logicalName] === null || opportunity[logicalName] === undefined || opportunity[logicalName] === "")
+    availableColumns.has(logicalName)
+    && (opportunity[logicalName] === null || opportunity[logicalName] === undefined || opportunity[logicalName] === "")
     && value !== null
     && value !== undefined
     && value !== ""

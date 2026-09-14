@@ -130,9 +130,10 @@ Configure the standard Lead/Enquiry-to-Opportunity relationship mappings so qual
 | `ht_loftladderrequired` | `ht_loftladderrequired` |
 | `ht_lightrequired` | `ht_lightrequired` |
 | `ht_insulationrequired` | `ht_insulationrequired` |
-| `leadsourcecode` | `leadsourcecode` |
 
-The API provides a second safety layer: when one of these Opportunity fields is blank, it reads the `originatingleadid` Enquiry, prefills the survey, and writes the missing source value plus its survey-text equivalent onto the Opportunity. Existing Opportunity values always win and are never overwritten.
+Do not map `leadsourcecode` to Opportunity unless that table has a separately designed compatible target column. The standard Opportunity table in this environment does not contain `leadsourcecode`. The API reads it from the originating Enquiry and stores its formatted label in `ht_surveyadvertisingsource` when that optional survey column exists.
+
+The API provides a second safety layer: when one of the supported Opportunity fields is blank, it reads the `originatingleadid` Enquiry, prefills the survey, and writes the missing compatible source value plus its survey-text equivalent onto the Opportunity. Existing Opportunity values always win and are never overwritten.
 
 On the Opportunity main form require:
 
