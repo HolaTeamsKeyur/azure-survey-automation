@@ -17,7 +17,7 @@ erDiagram
   OPPORTUNITY ||--o{ ORDER_CONFIRMATION : progresses_to
 ```
 
-The Opportunity's standard `pricelevelid` is the authoritative Price List for its survey. Region and Franchise Account remain available for identity and contact information, but they do not supply a fallback product catalogue.
+The Opportunity's standard `pricelevelid` is the authoritative Price List for its survey. If it is blank, the API inherits the related Franchise Account's standard `defaultpricelevelid` and writes that value onto the Opportunity before taking the product snapshot. No Price List ID is hard-coded.
 
 ## Regional catalogue structure
 
@@ -25,7 +25,7 @@ Products are global master records and must not be duplicated for each franchise
 
 1. Create or reuse the Franchise Account.
 2. Create one Price List for the Region/currency.
-3. Set the Opportunity's standard `pricelevelid` to that Price List.
+3. Set the Franchise Account's standard `defaultpricelevelid` to that Price List; set the Opportunity's `pricelevelid` directly when an exception is required.
 4. Create or reuse the `ht_region` row and set its `ht_franchise` lookup to the Account.
 5. Reuse the global Products and add one Price List Item per product required in that Region.
 6. On each eligible Product set `ht_showincustomersurvey = Yes`.
@@ -106,7 +106,7 @@ For this demonstration, time zone, duration and business hours are Azure applica
 ## Demonstration behaviour
 
 - Enquiry qualification mappings populate the Opportunity first. If supported values are still missing, the API recovers them from `originatingleadid`, prefills the form and backfills only blank Opportunity fields.
-- The email/form requires the Opportunity Price List and reads only its survey-enabled Products and prices. There is no Region/Franchise Price List fallback.
+- The email/form uses the Opportunity Price List when present; otherwise it inherits and records the related Franchise Account's Default Price List. It reads only that resolved list's survey-enabled Products and prices.
 - VAT is not displayed or calculated until Finance approves the authoritative rule.
 - The response and immutable selection snapshot are saved on Opportunity, but Opportunity Product rows are cleared. Selected products exist only as draft Quote Products, so unselected lines are excluded. If Quote creation is delegated with `CREATE_QUOTE_ON_SUBMIT=false`, that flow must create the Quote Products directly from the saved selection snapshot.
 - The installation response is saved on Order Confirmation; no Task or additional record is created.

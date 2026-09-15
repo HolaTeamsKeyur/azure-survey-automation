@@ -229,13 +229,13 @@ For every Region:
 5. Set a unique **Survey Display Order**, preferably in increments of 10.
 6. Add regional customer wording and price qualifier where needed.
 7. Set **Survey Price Is Indicative** for `From`, measured or size-dependent products.
-8. Set this Price List directly on each applicable Opportunity.
+8. Set it as the Franchise Account's **Default Price List**. Populate an Opportunity Price List directly only when that Opportunity needs an approved exception.
 
 ### 7.3 Resolution rule
 
-The API requires Opportunity `pricelevelid`. It reads that Price List's items, keeps only Products where Product `ht_ShowInCustomerSurvey = true`, and orders them by the Price List Item `ht_SurveyDisplayOrder`, then Product name.
+The API first uses Opportunity `pricelevelid`. If blank, it resolves Region > Franchise Account > `defaultpricelevelid` and stamps that list onto the Opportunity. It then keeps only Products where Product `ht_ShowInCustomerSurvey = true` and orders them by the Price List Item `ht_SurveyDisplayOrder`, then Product name.
 
-Failure to resolve exactly one approved Price List stops the send and records a safe error. Never fall back to a hard-coded price.
+Failure to resolve an Opportunity or Franchise Default Price List stops the send and records a safe error. Never fall back to a hard-coded price.
 
 ## 8. Form changes
 

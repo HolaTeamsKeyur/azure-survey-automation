@@ -284,7 +284,7 @@ For every region, such as Bristol or Manchester:
    - **Survey Price Is Indicative** = Yes when the displayed value is not a binding quote.
 6. Set the Product's **Show in Customer Survey** flag to No to hide it from every new survey, or remove its Price List Item to hide it only from Opportunities using that Price List.
 
-Set the correct Price List directly on the Opportunity. The Azure request takes an immutable product/price snapshot when the email is generated, so later price changes do not alter an already-issued form.
+Set the regional list as the Franchise Account's **Default Price List**. An Opportunity can override it with its own Price List; otherwise Azure inherits the franchise default, writes it onto the Opportunity and takes an immutable product/price snapshot when the email is generated.
 
 ### Data reconciliation
 

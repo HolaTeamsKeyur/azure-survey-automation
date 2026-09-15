@@ -3,7 +3,7 @@
 ## Preparation
 
 - Use an Opportunity whose Contact email points to the presenter.
-- Populate Region, Surveyor and Price List.
+- Populate Region and Surveyor. Confirm the related Franchise Account has its Default Price List (or set an Opportunity-specific Price List override).
 - Confirm the Price List has three recognisable products.
 - Use an Order Confirmation whose Customer Contact email points to the presenter and which has installation start/finish.
 - Keep Actionable Messages and Word attachment disabled for the first run.

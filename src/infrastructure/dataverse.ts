@@ -183,13 +183,15 @@ export class DataverseClient {
       )
       : undefined;
 
-    const priceListId = stringOrUndefined(row._pricelevelid_value);
+    let priceListId = stringOrUndefined(row._pricelevelid_value);
     const franchiseId = stringOrUndefined(region._ht_franchise_value);
     const franchise = franchiseId
       ? await this.request<Record<string, unknown>>(
-        `accounts(${normalizeGuid(franchiseId)})?$select=name`
+        `accounts(${normalizeGuid(franchiseId)})?$select=name,_defaultpricelevelid_value`
       )
       : undefined;
+    const franchiseDefaultPriceListId = stringOrUndefined(franchise?._defaultpricelevelid_value);
+    if (!priceListId) priceListId = franchiseDefaultPriceListId;
     const surveyorUserId = stringOrUndefined(row._ht_surveyor_value);
     let surveyorMailbox: string | undefined;
     let surveyorName: string | undefined;
@@ -235,7 +237,13 @@ export class DataverseClient {
     };
     const enquiryBackfill = enquiryOpportunityBackfill(row, enquiry, streetName, propertyPostcode, availableSurveyColumns);
     const surveyBackfill = opportunitySurveyBackfill(row, surveyDetails, availableSurveyColumns);
-    const opportunityBackfill = { ...enquiryBackfill, ...surveyBackfill };
+    const opportunityBackfill = {
+      ...enquiryBackfill,
+      ...surveyBackfill,
+      ...(!row._pricelevelid_value && priceListId
+        ? { "pricelevelid@odata.bind": `/pricelevels(${normalizeGuid(priceListId)})` }
+        : {})
+    };
     if (Object.keys(opportunityBackfill).length) {
       await this.request(`opportunities(${id})`, { method: "PATCH", body: JSON.stringify(opportunityBackfill) });
     }

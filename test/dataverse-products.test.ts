@@ -3,11 +3,12 @@ import test from "node:test";
 import type { TokenCredential } from "@azure/identity";
 import { DataverseClient } from "../src/infrastructure/dataverse.js";
 
-test("resolves franchise identity, Opportunity Price List and prefilled survey details", async () => {
+test("resolves franchise identity, Franchise default Price List and prefilled survey details", async () => {
   const originalFetch = globalThis.fetch;
-  const calls: string[] = [];
-  globalThis.fetch = (async (input: string | URL | Request) => {
-    const url = String(input); calls.push(url);
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input); calls.push({ url, init });
+    if (url.includes("/opportunities(") && init?.method === "PATCH") return new Response(null, { status: 204 });
     if (url.includes("/opportunities(")) return new Response(JSON.stringify({
       opportunityid: "11111111-1111-4111-8111-111111111111",
       name: "Enquiry 100",
@@ -16,11 +17,10 @@ test("resolves franchise identity, Opportunity Price List and prefilled survey d
       ht_propertytype: 1,
       "ht_propertytype@OData.Community.Display.V1.FormattedValue": "Semi-detached",
       ht_loftboardingrequired: true,
-      _pricelevelid_value: "55555555-5555-4555-8555-555555555555",
       parentcontactid: { contactid: "22222222-2222-4222-8222-222222222222", fullname: "Jamie Taylor", emailaddress1: "jamie@example.test" },
       ht_Region: { ht_regionid: "33333333-3333-4333-8333-333333333333", ht_name: "Brighton Region", _ht_franchise_value: "44444444-4444-4444-8444-444444444444" }
     }), { status: 200, headers: { "Content-Type": "application/json" } });
-    if (url.includes("/accounts(")) return new Response(JSON.stringify({ name: "Brighton" }), { status: 200, headers: { "Content-Type": "application/json" } });
+    if (url.includes("/accounts(")) return new Response(JSON.stringify({ name: "Brighton", _defaultpricelevelid_value: "55555555-5555-4555-8555-555555555555" }), { status: 200, headers: { "Content-Type": "application/json" } });
     return new Response(null, { status: 404 });
   }) as typeof fetch;
   const credential = { getToken: async () => ({ token: "test", expiresOnTimestamp: Date.now() + 60_000 }) } as TokenCredential;
@@ -33,11 +33,17 @@ test("resolves franchise identity, Opportunity Price List and prefilled survey d
   } finally {
     globalThis.fetch = originalFetch;
   }
-  assert.ok(calls.some(url => url.includes("/accounts(44444444-4444-4444-8444-444444444444)")));
-  const opportunityCall = calls.find(url => url.includes("/opportunities("));
+  assert.ok(calls.some(call => call.url.includes("/accounts(44444444-4444-4444-8444-444444444444)")));
+  const opportunityCall = calls.find(call => call.url.includes("/opportunities(") && !call.init?.method);
   assert.ok(opportunityCall);
-  assert.doesNotMatch(opportunityCall, /ht_surveyaddress/);
-  assert.doesNotMatch(opportunityCall, /leadsourcecode/);
+  assert.doesNotMatch(opportunityCall.url, /ht_surveyaddress/);
+  assert.doesNotMatch(opportunityCall.url, /leadsourcecode/);
+  const opportunityPatch = calls.find(call => call.url.includes("/opportunities(") && call.init?.method === "PATCH");
+  assert.ok(opportunityPatch);
+  assert.equal(
+    JSON.parse(String(opportunityPatch.init?.body))["pricelevelid@odata.bind"],
+    "/pricelevels(55555555-5555-4555-8555-555555555555)"
+  );
 });
 
 test("prefills missing Opportunity survey fields from the originating Enquiry and persists them", async () => {
