@@ -23,7 +23,15 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
     assertSurveyorAccess(config, principal, model.session.recipientEmail);
     if (request.method === "GET") {
       if (["accepted", "declined", "reschedule_requested"].includes(model.session.status)) {
-        return { status: 200, headers: surveyPageHeaders(requestId), body: renderSurveyThanks(model.session.selectionSnapshot.length) };
+        return {
+          status: 200,
+          headers: surveyPageHeaders(requestId),
+          body: renderSurveyThanks(
+            model.session.selectionSnapshot.length,
+            0,
+            model.quoteId ? dynamicsQuoteUrl(config.dataverseUrl, model.quoteId) : undefined
+          )
+        };
       }
       return { status: 200, headers: surveyPageHeaders(requestId), body: renderSurveyForm({ token, draftId: model.session.tokenId, context: model.context, scheduledStart: model.session.scheduledStart, products: model.products, layout: model.layout, enableNewProductRequests: config.enableNewProductRequests }) };
     }
@@ -55,7 +63,15 @@ async function handler(request: HttpRequest, context: InvocationContext): Promis
     if (wantsJson(request)) {
       return { status: 200, headers: jsonHeaders(requestId), jsonBody: { ...result, nextUrl } };
     }
-    return { status: 303, headers: { ...surveyPageHeaders(requestId), "Location": nextUrl }, body: renderSurveyThanks(result.productCount, result.requestedProductCount, result.quoteId) };
+    return {
+      status: 303,
+      headers: { ...surveyPageHeaders(requestId), "Location": nextUrl },
+      body: renderSurveyThanks(
+        result.productCount,
+        result.requestedProductCount,
+        result.quoteId ? dynamicsQuoteUrl(config.dataverseUrl, result.quoteId) : undefined
+      )
+    };
   } catch (error) {
     context.error(`Survey form request failed. Correlation ID: ${requestId}`, error);
     if (recordFailure) {
@@ -116,3 +132,6 @@ function accessDeniedPage(message: string): string { return `<!doctype html><htm
 function escapeHtml(value: string): string { return value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!); }
 function wantsJson(request: HttpRequest): boolean { return request.headers.get("accept")?.includes("application/json") ?? false; }
 function jsonHeaders(requestId: string): Record<string, string> { return { "Cache-Control": "no-store", "Content-Type": "application/json; charset=utf-8", "x-correlation-id": requestId }; }
+function dynamicsQuoteUrl(dataverseUrl: string, quoteId: string): string {
+  return `${dataverseUrl}/main.aspx?pagetype=entityrecord&etn=quote&id=${encodeURIComponent(quoteId)}`;
+}

@@ -208,6 +208,27 @@ test("loads only survey-enabled Products from the Opportunity Price List", async
   assert.doesNotMatch(requestedUrl, /statecode/);
 });
 
+test("finds the latest Quote for a completed Opportunity", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = "";
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    requestedUrl = String(input);
+    return new Response(JSON.stringify({
+      value: [{ quoteid: "11111111-1111-4111-8111-111111111111", createdon: "2026-09-15T14:13:51Z" }]
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }) as typeof fetch;
+  const credential = { getToken: async () => ({ token: "test", expiresOnTimestamp: Date.now() + 60_000 }) } as TokenCredential;
+  try {
+    const quoteId = await new DataverseClient("https://example.crm.dynamics.com", credential)
+      .getLatestQuoteIdForOpportunity("22222222-2222-4222-8222-222222222222");
+    assert.equal(quoteId, "11111111-1111-4111-8111-111111111111");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.match(requestedUrl, /_opportunityid_value eq 22222222-2222-4222-8222-222222222222/);
+  assert.match(requestedUrl, /\$orderby=createdon desc&\$top=1/);
+});
+
 test("refreshes an existing draft Quote with only the selected products", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ url: string; init?: RequestInit }> = [];

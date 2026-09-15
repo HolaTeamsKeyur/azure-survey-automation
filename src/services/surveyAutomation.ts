@@ -220,6 +220,7 @@ export class SurveyAutomationService {
     context: Awaited<ReturnType<DataverseClient["getOpportunityContext"]>>;
     products: ProductOption[];
     layout: typeof defaultSurveyLayout;
+    quoteId?: string;
   }> {
     const session = await this.dataverse.getSession(tokenClaims.sessionId);
     if (session.tokenId !== tokenClaims.tokenId || hashEmail(session.recipientEmail) !== tokenClaims.recipientHash) {
@@ -230,7 +231,10 @@ export class SurveyAutomationService {
     const layout = this.config.enableDataverseSurveyLayout
       ? await this.dataverse.getSurveyLayout(context.region.id) ?? defaultSurveyLayout
       : defaultSurveyLayout;
-    return { session, context, products: session.productsSnapshot, layout };
+    const quoteId = session.status === "accepted"
+      ? await this.dataverse.getLatestQuoteIdForOpportunity(session.opportunityId)
+      : undefined;
+    return { session, context, products: session.productsSnapshot, layout, quoteId };
   }
 
   async getSurveyFormByOpportunityId(opportunityId: string): Promise<{
@@ -239,6 +243,7 @@ export class SurveyAutomationService {
     products: ProductOption[];
     layout: typeof defaultSurveyLayout;
     token: string;
+    quoteId?: string;
   }> {
     const session = await this.dataverse.getSession(opportunityId);
     const context = await this.dataverse.getOpportunityContext(session.opportunityId);
@@ -250,7 +255,10 @@ export class SurveyAutomationService {
       tokenId: session.tokenId,
       recipientHash: hashEmail(session.recipientEmail)
     });
-    return { session, context, products: session.productsSnapshot, layout, token };
+    const quoteId = session.status === "accepted"
+      ? await this.dataverse.getLatestQuoteIdForOpportunity(session.opportunityId)
+      : undefined;
+    return { session, context, products: session.productsSnapshot, layout, token, quoteId };
   }
 
   async renewOpenSurveySession(sessionId: string): Promise<void> {

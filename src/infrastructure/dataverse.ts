@@ -441,6 +441,15 @@ export class DataverseClient {
     return { quoteId: normalizedQuoteId, reused: false };
   }
 
+  async getLatestQuoteIdForOpportunity(opportunityId: string): Promise<string | undefined> {
+    const opportunity = normalizeGuid(opportunityId);
+    const result = await this.request<{ value: Array<Record<string, unknown>> }>(
+      `quotes?$select=quoteid,createdon&$filter=_opportunityid_value eq ${opportunity}&$orderby=createdon desc&$top=1`
+    );
+    const quoteId = stringOrUndefined(result.value[0]?.quoteid);
+    return quoteId ? normalizeGuid(quoteId) : undefined;
+  }
+
   private async replaceQuoteProducts(
     quoteId: string,
     selections: readonly SurveyProductSelectionSnapshot[]

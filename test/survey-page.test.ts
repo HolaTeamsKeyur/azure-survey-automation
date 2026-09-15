@@ -1,6 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { renderSurveyForm, surveyPageHeaders } from "../src/views/surveyPage.js";
+import { renderSurveyForm, renderSurveyThanks, surveyPageHeaders } from "../src/views/surveyPage.js";
+
+test("completed survey shows a Dynamics Quote button when a Quote exists", () => {
+  const quoteUrl = "https://example.crm.dynamics.com/main.aspx?pagetype=entityrecord&etn=quote&id=11111111-1111-4111-8111-111111111111";
+  const html = renderSurveyThanks(4, 0, quoteUrl);
+  assert.match(html, /Open quote in Dynamics 365/);
+  assert.match(html, /target="_blank"/);
+  assert.match(html, /etn=quote&amp;id=11111111-1111-4111-8111-111111111111/);
+});
+
+test("completed survey hides the Quote button while product requests await review", () => {
+  const html = renderSurveyThanks(4, 1);
+  assert.doesNotMatch(html, /Open quote in Dynamics 365/);
+});
 
 test("renders the surveyor-facing property workflow without demo content", () => {
   const html = renderSurveyForm({
