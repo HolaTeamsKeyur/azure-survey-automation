@@ -22,7 +22,7 @@ test("renders the surveyor-facing property workflow without demo content", () =>
     context: {
       opportunityId: "11111111-1111-4111-8111-111111111111", name: "Enquiry 100", streetName: "10 Test Road", propertyPostcode: "BN1 1AA",
       surveyorUserId: "66666666-6666-4666-8666-666666666666",
-      surveyDetails: { propertyType: "Semi-detached", propertyAge: "1930s", existingHatchType: "Push-up" },
+      surveyDetails: { propertyType: "Semi-Detached", propertyAge: "1900-1939", existingHatchType: "Pushup", flooringRequired: "No", ladderRequired: "Yes", lightRequired: "Already Installed", insulationRequired: "No", advertisingSource: "Web" },
       customer: { contactId: "22222222-2222-4222-8222-222222222222", name: "Jamie Taylor", email: "jamie@example.test", mobile: "07700 900123" },
       region: { id: "33333333-3333-4333-8333-333333333333", name: "Brighton Region", franchiseName: "Access4Lofts Brighton", telephone: "01273 034001", senderMailbox: "brighton@example.test", surveyorMailbox: "surveyor@example.test", surveyorName: "Alex Surveyor", surveyorUserId: "66666666-6666-4666-8666-666666666666", timeZone: "Europe/London", surveyDurationMinutes: 60, businessDayStartHour: 9, businessDayEndHour: 17, autoScheduleEnabled: false }
     },
@@ -36,8 +36,12 @@ test("renders the surveyor-facing property workflow without demo content", () =>
   assert.match(html, /alt="Access4Lofts"/);
   assert.match(html, /<strong>Brighton<\/strong>/);
   assert.doesNotMatch(html, /Access4Lofts Access4Lofts/);
-  assert.match(html, /value="Semi-detached"/);
-  assert.match(html, /value="1930s"/);
+  assert.match(html, /<select name="propertyType">/);
+  assert.match(html, /<option value="Semi-Detached" selected>Semi-Detached<\/option>/);
+  assert.match(html, /<option value="1900-1939" selected>1900-1939<\/option>/);
+  assert.match(html, /<option value="Already Installed" selected>Already Installed<\/option>/);
+  assert.match(html, /<option value="Web" selected>Web<\/option>/);
+  assert.equal((html.match(/<select name="/g) ?? []).length, 8);
   assert.match(html, /Loft boarding/);
   assert.match(html, /name="selected_44444444-4444-4444-8444-444444444444"/);
   assert.match(html, /name="quantity_44444444-4444-4444-8444-444444444444"/);

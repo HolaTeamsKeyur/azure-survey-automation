@@ -85,16 +85,33 @@ test("submission clears Opportunity Products and sends selections only to the Qu
   } as unknown as DataverseClient;
   const service = new SurveyAutomationService(config({ CREATE_QUOTE_ON_SUBMIT: "true" }), dataverse, {} as GraphClient);
   const result = await service.submitSurvey(
-    { sessionId: session.id, response: "accepted", selectedProductIds: [product.productId], productSelections: [{ productId: product.productId, quantity: 2 }], details: { propertyType: "Semi-detached" } },
+    { sessionId: session.id, response: "accepted", selectedProductIds: [product.productId], productSelections: [{ productId: product.productId, quantity: 2 }], details: { propertyType: "Semi-Detached", flooringRequired: "No", lightRequired: "Already Installed" } },
     { sessionId: session.id, tokenId: session.tokenId, recipientHash: hashEmail(session.recipientEmail) }
   );
   assert.equal(opportunityProductsCleared, true);
   assert.equal((quoteSelection as Array<{ productId: string }>)[0].productId, product.productId);
   assert.equal(savedPatch.ht_surveyselectedproductids, undefined);
-  assert.equal(savedPatch.ht_surveypropertytype, "Semi-detached");
+  assert.equal(savedPatch.ht_surveypropertytype, "Semi-Detached");
+  assert.equal(savedPatch.ht_propertytype, 123160001);
+  assert.equal(savedPatch.ht_loftboardingrequired, false);
+  assert.equal(savedPatch.ht_lightrequired, 123160002);
   assert.equal(savedPatch.ht_surveyautomationlasterror, null);
   assert.equal(result.quoteId, "99999999-9999-4999-8999-999999999999");
   assert.equal(finalExpectedVersion, undefined);
+});
+
+test("rejects a tampered survey Choice before changing Dataverse", async () => {
+  let called = false;
+  const dataverse = { getSession: async () => { called = true; return session; } } as unknown as DataverseClient;
+  const service = new SurveyAutomationService(config(), dataverse, {} as GraphClient);
+  await assert.rejects(
+    service.submitSurvey(
+      { sessionId: session.id, response: "accepted", selectedProductIds: [], details: { propertyType: "fregr" } },
+      { sessionId: session.id, tokenId: session.tokenId, recipientHash: hashEmail(session.recipientEmail) }
+    ),
+    /Invalid survey choice for propertyType/
+  );
+  assert.equal(called, false);
 });
 
 test("records a survey processing failure on the Opportunity with its reference", async () => {

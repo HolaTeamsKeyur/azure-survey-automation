@@ -9,6 +9,7 @@ import { GraphClient, type MailAttachment } from "../infrastructure/graph.js";
 import { issueSurveyToken, type SurveyTokenClaims } from "../security/tokens.js";
 import { surveyorOpportunityUrl } from "../security/clientPrincipal.js";
 import { defaultSurveyLayout } from "../domain/surveyLayout.js";
+import { assertValidSurveyChoices, surveyChoiceOption } from "../domain/surveyChoices.js";
 
 export class SurveyAutomationService {
   private readonly documents?: SurveyDocumentService;
@@ -153,6 +154,7 @@ export class SurveyAutomationService {
     tokenClaims: SurveyTokenClaims
   ): Promise<{ status: string; productCount: number; requestedProductCount: number; quoteId?: string }> {
     const submission = validateSurveySubmission(input);
+    assertValidSurveyChoices(submission.details);
     const session = await this.dataverse.getSession(submission.sessionId);
     if (session.tokenId !== tokenClaims.tokenId || hashEmail(session.recipientEmail) !== tokenClaims.recipientHash) {
       throw new Error("Survey token does not match the Opportunity.");
@@ -307,16 +309,31 @@ function pilotSurveySlot(context: OpportunityContext, durationMinutes: number): 
 
 function surveyDetailsPatch(details: SurveySubmission["details"]): Record<string, unknown> {
   if (!details) return {};
+  const propertyType = surveyChoiceOption("propertyType", details.propertyType);
+  const propertyAge = surveyChoiceOption("propertyAge", details.propertyAge);
+  const advertisingSource = surveyChoiceOption("advertisingSource", details.advertisingSource);
+  const existingHatchType = surveyChoiceOption("existingHatchType", details.existingHatchType);
+  const flooringRequired = surveyChoiceOption("flooringRequired", details.flooringRequired);
+  const ladderRequired = surveyChoiceOption("ladderRequired", details.ladderRequired);
+  const lightRequired = surveyChoiceOption("lightRequired", details.lightRequired);
+  const insulationRequired = surveyChoiceOption("insulationRequired", details.insulationRequired);
   return {
     ht_surveyaddress: details.address ?? null,
-    ht_surveypropertytype: details.propertyType ?? null,
-    ht_surveypropertyage: details.propertyAge ?? null,
-    ht_surveyadvertisingsource: details.advertisingSource ?? null,
-    ht_surveyexistinghatchtype: details.existingHatchType ?? null,
-    ht_surveyflooringrequired: details.flooringRequired ?? null,
-    ht_surveyladderrequired: details.ladderRequired ?? null,
-    ht_surveylightrequired: details.lightRequired ?? null,
-    ht_surveyinsulationrequired: details.insulationRequired ?? null,
+    ht_surveypropertytype: propertyType?.label ?? null,
+    ht_surveypropertyage: propertyAge?.label ?? null,
+    ht_surveyadvertisingsource: advertisingSource?.label ?? null,
+    ht_surveyexistinghatchtype: existingHatchType?.label ?? null,
+    ht_surveyflooringrequired: flooringRequired?.label ?? null,
+    ht_surveyladderrequired: ladderRequired?.label ?? null,
+    ht_surveylightrequired: lightRequired?.label ?? null,
+    ht_surveyinsulationrequired: insulationRequired?.label ?? null,
+    ...(propertyType ? { ht_propertytype: propertyType.value } : {}),
+    ...(propertyAge ? { ht_propertyage: propertyAge.value } : {}),
+    ...(existingHatchType ? { ht_existinghatchtype: existingHatchType.value } : {}),
+    ...(flooringRequired ? { ht_loftboardingrequired: flooringRequired.value } : {}),
+    ...(ladderRequired ? { ht_loftladderrequired: ladderRequired.value } : {}),
+    ...(lightRequired ? { ht_lightrequired: lightRequired.value } : {}),
+    ...(insulationRequired ? { ht_insulationrequired: insulationRequired.value } : {}),
     ht_surveyotherinformation: details.otherInformation ?? null,
     ht_quotationdate: details.quotationDate ?? null,
     ht_surveyhousetype: details.houseType ?? null,
