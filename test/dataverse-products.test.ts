@@ -206,6 +206,8 @@ test("loads only survey-enabled Products from the Opportunity Price List", async
   assert.match(requestedUrl, /productid\(\$select=productid,name,description,ht_showincustomersurvey\)/);
   assert.doesNotMatch(requestedUrl, /and ht_showincustomersurvey/);
   assert.doesNotMatch(requestedUrl, /statecode/);
+  assert.doesNotMatch(requestedUrl, /ht_surveydisplayorder/);
+  assert.doesNotMatch(requestedUrl, /\$orderby/);
 });
 
 test("finds the latest Quote for a completed Opportunity", async () => {

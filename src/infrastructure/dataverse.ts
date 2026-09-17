@@ -59,11 +59,19 @@ const OPTIONAL_OPPORTUNITY_CONTEXT_COLUMNS = [
 ] as const;
 const OPTIONAL_OPPORTUNITY_CONTEXT_COLUMN_SET = new Set<string>(OPTIONAL_OPPORTUNITY_CONTEXT_COLUMNS);
 const OPTIONAL_LEAD_ENQUIRY_COLUMN_SET = new Set<string>(OPTIONAL_OPPORTUNITY_ENQUIRY_COLUMNS);
+const OPTIONAL_PRICE_LIST_ITEM_SURVEY_COLUMNS = [
+  "ht_surveydisplayorder",
+  "ht_surveycustomerdescription",
+  "ht_surveypricedisplaytext",
+  "ht_surveypriceisindicative"
+] as const;
+const OPTIONAL_PRICE_LIST_ITEM_SURVEY_COLUMN_SET = new Set<string>(OPTIONAL_PRICE_LIST_ITEM_SURVEY_COLUMNS);
 
 export class DataverseClient {
   private opportunitySurveyColumnsPromise?: Promise<Set<string>>;
   private opportunitySurveyColumnsLoadedAt = 0;
   private leadEnquiryColumnsPromise?: Promise<Set<string>>;
+  private priceListItemSurveyColumnsPromise?: Promise<Set<string>>;
 
   constructor(
     private readonly baseUrl: string,
@@ -138,6 +146,30 @@ export class DataverseClient {
       );
     } catch {
       // Standard Lead fields remain usable when custom-field metadata cannot be read.
+      return new Set<string>();
+    }
+  }
+
+  private getAvailablePriceListItemSurveyColumns(): Promise<Set<string>> {
+    this.priceListItemSurveyColumnsPromise ??= this.loadAvailablePriceListItemSurveyColumns();
+    return this.priceListItemSurveyColumnsPromise;
+  }
+
+  private async loadAvailablePriceListItemSurveyColumns(): Promise<Set<string>> {
+    try {
+      const result = await this.request<{ value: Array<{ LogicalName?: string }> }>(
+        "EntityDefinitions(LogicalName='productpricelevel')/Attributes?$select=LogicalName"
+      );
+      return new Set(
+        result.value
+          .map(attribute => attribute.LogicalName?.toLowerCase())
+          .filter((name): name is string =>
+            typeof name === "string" && OPTIONAL_PRICE_LIST_ITEM_SURVEY_COLUMN_SET.has(name)
+          )
+      );
+    } catch {
+      // Product, Unit and Amount are sufficient when presentation columns have
+      // not yet been added to Price List Item.
       return new Set<string>();
     }
   }
@@ -287,16 +319,19 @@ export class DataverseClient {
 
   async getOpportunityPriceListProducts(priceListId: string): Promise<ProductOption[]> {
     const id = normalizeGuid(priceListId);
+    const availableSurveyColumns = await this.getAvailablePriceListItemSurveyColumns();
+    const optionalSelect = OPTIONAL_PRICE_LIST_ITEM_SURVEY_COLUMNS
+      .filter(name => availableSurveyColumns.has(name))
+      .join(",");
     const result = await this.request<{ value: Array<Record<string, unknown>> }>(
-      `productpricelevels?$select=productpricelevelid,amount,_productid_value,_uomid_value,ht_surveydisplayorder,ht_surveycustomerdescription,ht_surveypricedisplaytext,ht_surveypriceisindicative&` +
+      `productpricelevels?$select=productpricelevelid,amount,_productid_value,_uomid_value${optionalSelect ? `,${optionalSelect}` : ""}&` +
       `$expand=productid($select=productid,name,description,ht_showincustomersurvey),uomid($select=uomid,name)&` +
-      `$filter=_pricelevelid_value eq ${id}&` +
-      `$orderby=ht_surveydisplayorder asc`
+      `$filter=_pricelevelid_value eq ${id}`
     );
     return result.value.filter(row => {
       const product = row.productid as Record<string, unknown> | undefined;
       return product?.ht_showincustomersurvey === true;
-    }).map((row, index) => {
+    }).map(row => {
       const product = row.productid as Record<string, unknown> | undefined;
       const unit = row.uomid as Record<string, unknown> | undefined;
       return {
@@ -312,9 +347,9 @@ export class DataverseClient {
         priceIsIndicative: Boolean(row.ht_surveypriceisindicative),
         vatRate: undefined,
         selectedByDefault: false,
-        sortOrder: numberOr(row.ht_surveydisplayorder, index + 1)
+        sortOrder: numberOr(row.ht_surveydisplayorder, Number.MAX_SAFE_INTEGER)
       };
-    });
+    }).sort((left, right) => left.sortOrder - right.sortOrder || left.name.localeCompare(right.name));
   }
 
   async applyOpportunityPriceList(opportunityId: string, priceListId: string): Promise<string | undefined> {
