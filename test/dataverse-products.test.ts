@@ -180,14 +180,21 @@ test("loads only survey-enabled Products from the Opportunity Price List", async
         ht_surveydisplayorder: 1,
         ht_surveypricedisplaytext: "£124.17",
         ht_surveypriceisindicative: false,
-        productid: { name: "New uPVC hatch", ht_showincustomersurvey: true },
+        productid: { name: "New uPVC hatch", ht_showincustomersurvey: true, statecode: 0 },
         uomid: { name: "Primary Unit" }
       }, {
         productpricelevelid: "55555555-5555-4555-8555-555555555555",
         _productid_value: "66666666-6666-4666-8666-666666666666",
         _uomid_value: "33333333-3333-8333-8333-333333333333",
         amount: 50,
-        productid: { name: "Internal fitting", ht_showincustomersurvey: false },
+        productid: { name: "Internal fitting", ht_showincustomersurvey: false, statecode: 0 },
+        uomid: { name: "Each" }
+      }, {
+        productpricelevelid: "77777777-7777-4777-8777-777777777777",
+        _productid_value: "88888888-8888-4888-8888-888888888888",
+        _uomid_value: "33333333-3333-4333-8333-333333333333",
+        amount: 75,
+        productid: { name: "Draft survey product", ht_showincustomersurvey: true, statecode: 2 },
         uomid: { name: "Each" }
       }]
     }), { status: 200, headers: { "Content-Type": "application/json" } });
@@ -203,9 +210,8 @@ test("loads only survey-enabled Products from the Opportunity Price List", async
     globalThis.fetch = originalFetch;
   }
   assert.match(requestedUrl, /_pricelevelid_value eq 44444444-4444-4444-8444-444444444444/);
-  assert.match(requestedUrl, /productid\(\$select=productid,name,description,ht_showincustomersurvey\)/);
+  assert.match(requestedUrl, /productid\(\$select=productid,name,description,ht_showincustomersurvey,statecode\)/);
   assert.doesNotMatch(requestedUrl, /and ht_showincustomersurvey/);
-  assert.doesNotMatch(requestedUrl, /statecode/);
   assert.doesNotMatch(requestedUrl, /ht_surveydisplayorder/);
   assert.doesNotMatch(requestedUrl, /\$orderby/);
 });

@@ -325,12 +325,15 @@ export class DataverseClient {
       .join(",");
     const result = await this.request<{ value: Array<Record<string, unknown>> }>(
       `productpricelevels?$select=productpricelevelid,amount,_productid_value,_uomid_value${optionalSelect ? `,${optionalSelect}` : ""}&` +
-      `$expand=productid($select=productid,name,description,ht_showincustomersurvey),uomid($select=uomid,name)&` +
+      `$expand=productid($select=productid,name,description,ht_showincustomersurvey,statecode),uomid($select=uomid,name)&` +
       `$filter=_pricelevelid_value eq ${id}`
     );
     return result.value.filter(row => {
       const product = row.productid as Record<string, unknown> | undefined;
-      return product?.ht_showincustomersurvey === true;
+      // Only active products can be added to an Opportunity or Quote. Keeping
+      // Draft/retired products out of the survey prevents a late Dataverse 400
+      // after the surveyor has already completed the form.
+      return product?.ht_showincustomersurvey === true && Number(product.statecode) === 0;
     }).map(row => {
       const product = row.productid as Record<string, unknown> | undefined;
       const unit = row.uomid as Record<string, unknown> | undefined;
