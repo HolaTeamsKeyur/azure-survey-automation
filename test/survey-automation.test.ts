@@ -100,6 +100,25 @@ test("submission clears Opportunity Products and sends selections only to the Qu
   assert.equal(finalExpectedVersion, undefined);
 });
 
+test("rejects an accepted survey with no selected products before changing Dataverse", async () => {
+  let changed = false;
+  const dataverse = {
+    getSession: async () => session,
+    getOpportunityContext: async () => { changed = true; return opportunity; },
+    updateSession: async () => { changed = true; }
+  } as unknown as DataverseClient;
+  const service = new SurveyAutomationService(config({ CREATE_QUOTE_ON_SUBMIT: "true" }), dataverse, {} as GraphClient);
+
+  await assert.rejects(
+    service.submitSurvey(
+      { sessionId: session.id, response: "accepted", selectedProductIds: [], productSelections: [] },
+      { sessionId: session.id, tokenId: session.tokenId, recipientHash: hashEmail(session.recipientEmail) }
+    ),
+    /Select at least one product/
+  );
+  assert.equal(changed, false);
+});
+
 test("rejects a tampered survey Choice before changing Dataverse", async () => {
   let called = false;
   const dataverse = { getSession: async () => { called = true; return session; } } as unknown as DataverseClient;

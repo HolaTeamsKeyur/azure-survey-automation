@@ -184,6 +184,9 @@ export class SurveyAutomationService {
     }));
     const selected = validateProductSelections(requested, session.productsSnapshot);
     const newProductRequests = submission.newProductRequests ?? [];
+    if (selected.length === 0 && newProductRequests.length === 0) {
+      throw new Error("Select at least one product before completing the survey.");
+    }
     if (newProductRequests.length && !this.config.enableNewProductRequests) {
       throw new Error("New product requests are not enabled for this environment.");
     }

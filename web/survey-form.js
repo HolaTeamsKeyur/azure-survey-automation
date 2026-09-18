@@ -108,6 +108,15 @@
 
   form?.addEventListener("submit", async event => {
     event.preventDefault();
+    const selectedProducts = rows.filter(row => row.querySelector("input[type=checkbox]")?.checked);
+    if (selectedProducts.length === 0) {
+      const status = event.currentTarget.querySelector("#submission-status");
+      status.hidden = false;
+      status.classList.add("is-error");
+      status.textContent = "Select at least one product before completing the survey.";
+      document.querySelector(".products-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     if (!event.currentTarget.checkValidity()) {
       event.currentTarget.reportValidity();
       return;
