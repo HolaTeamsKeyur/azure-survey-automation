@@ -160,10 +160,14 @@ export class SurveyAutomationService {
       throw new Error("Survey token does not match the Opportunity.");
     }
     if (new Date(session.expiresAt) <= new Date()) throw new Error("Survey link has expired.");
-    if (["accepted", "declined", "reschedule_requested"].includes(session.status)) {
+    // Some legacy/Power Automate processes can incorrectly write "accepted"
+    // before the survey has any validated selections. That is not a completed
+    // survey and must remain recoverable through the signed form.
+    const currentStatus = isRecoverableEmptyAcceptance(session) ? "sent" : session.status;
+    if (["accepted", "declined", "reschedule_requested"].includes(currentStatus)) {
       return { status: session.status, productCount: session.selectionSnapshot.length, requestedProductCount: 0 };
     }
-    assertTransition(session.status, submission.response);
+    assertTransition(currentStatus, submission.response);
 
     const commonPatch = {
       ht_surveyautomationstatuskey: submission.response,
@@ -227,7 +231,10 @@ export class SurveyAutomationService {
     layout: typeof defaultSurveyLayout;
     quoteId?: string;
   }> {
-    const session = await this.dataverse.getSession(tokenClaims.sessionId);
+    const storedSession = await this.dataverse.getSession(tokenClaims.sessionId);
+    const session = isRecoverableEmptyAcceptance(storedSession)
+      ? { ...storedSession, status: "sent" as const }
+      : storedSession;
     if (session.tokenId !== tokenClaims.tokenId || hashEmail(session.recipientEmail) !== tokenClaims.recipientHash) {
       throw new Error("Survey token does not match the Opportunity.");
     }
@@ -250,7 +257,10 @@ export class SurveyAutomationService {
     token: string;
     quoteId?: string;
   }> {
-    const session = await this.dataverse.getSession(opportunityId);
+    const storedSession = await this.dataverse.getSession(opportunityId);
+    const session = isRecoverableEmptyAcceptance(storedSession)
+      ? { ...storedSession, status: "sent" as const }
+      : storedSession;
     const context = await this.dataverse.getOpportunityContext(session.opportunityId);
     const layout = this.config.enableDataverseSurveyLayout
       ? await this.dataverse.getSurveyLayout(context.region.id) ?? defaultSurveyLayout
@@ -275,6 +285,10 @@ export class SurveyAutomationService {
   parseProductSelection(value: string | undefined): string[] {
     return splitProductIds(value);
   }
+}
+
+function isRecoverableEmptyAcceptance(session: { status: string; selectionSnapshot: readonly unknown[] }): boolean {
+  return session.status === "accepted" && session.selectionSnapshot.length === 0;
 }
 
 function surveyRequestResult(

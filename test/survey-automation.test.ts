@@ -119,6 +119,41 @@ test("rejects an accepted survey with no selected products before changing Datav
   assert.equal(changed, false);
 });
 
+test("recovers an externally accepted session when it has no validated selections", async () => {
+  let quoteCreated = false;
+  let savedStatus = "";
+  const incorrectlyAccepted = { ...session, status: "accepted" as const };
+  const dataverse = {
+    getSession: async () => incorrectlyAccepted,
+    getOpportunityContext: async () => opportunity,
+    applyOpportunityPriceList: async () => "88888888-8888-4888-8888-888888888888",
+    clearOpportunityProducts: async () => undefined,
+    generateQuoteFromOpportunity: async () => {
+      quoteCreated = true;
+      return { quoteId: "99999999-9999-4999-8999-999999999999", reused: false };
+    },
+    updateSession: async (_id: string, patch: Record<string, unknown>) => {
+      savedStatus = String(patch.ht_surveyautomationstatuskey);
+    }
+  } as unknown as DataverseClient;
+  const service = new SurveyAutomationService(config({ CREATE_QUOTE_ON_SUBMIT: "true" }), dataverse, {} as GraphClient);
+
+  const form = await service.getSurveyForm({
+    sessionId: session.id,
+    tokenId: session.tokenId,
+    recipientHash: hashEmail(session.recipientEmail)
+  });
+  assert.equal(form.session.status, "sent");
+
+  const result = await service.submitSurvey(
+    { sessionId: session.id, response: "accepted", selectedProductIds: [product.productId], productSelections: [{ productId: product.productId, quantity: 1 }] },
+    { sessionId: session.id, tokenId: session.tokenId, recipientHash: hashEmail(session.recipientEmail) }
+  );
+  assert.equal(quoteCreated, true);
+  assert.equal(savedStatus, "accepted");
+  assert.equal(result.productCount, 1);
+});
+
 test("rejects a tampered survey Choice before changing Dataverse", async () => {
   let called = false;
   const dataverse = { getSession: async () => { called = true; return session; } } as unknown as DataverseClient;
